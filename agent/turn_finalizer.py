@@ -491,7 +491,7 @@ def finalize_turn(
     # Plugins can use this for cleanup, flushing buffers, etc.
     try:
         from hermes_cli.plugins import invoke_hook as _invoke_hook
-        _invoke_hook(
+        _on_session_end_results = _invoke_hook(
             "on_session_end",
             session_id=agent.session_id,
             task_id=effective_task_id,
@@ -500,7 +500,18 @@ def finalize_turn(
             interrupted=interrupted,
             model=agent.model,
             platform=getattr(agent, "platform", None) or "",
-        )
+            messages=messages,
+            final_response=final_response,
+        )  # raiden-patch-marker
+        # If a plugin returned advice (dict with "advice" key), append it
+        # to the final response so the user sees it.
+        for _hook_result in _on_session_end_results:
+            if isinstance(_hook_result, dict) and _hook_result.get("advice"):
+                _advice_text = _hook_result["advice"]
+                if final_response and isinstance(final_response, str):
+                    final_response = final_response.rstrip() + "\n\n\U0001f4cb Raiden: " + _advice_text
+                    result["final_response"] = final_response
+                break
     except Exception as exc:
         logger.warning("on_session_end hook failed: %s", exc)
 

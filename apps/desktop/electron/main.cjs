@@ -5310,7 +5310,9 @@ async function spawnPoolBackend(profile, entry) {
         ...(readyFile ? { HERMES_DESKTOP_READY_FILE: readyFile } : {})
       },
       shell: backend.shell,
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: ['ignore', 'pipe', 'pipe'],
+      // ponytail: close inherited FDs from Electron to prevent Python select/poll CPU spin
+      preExec: () => { const { closeSync } = require('fs'); for (let fd = 3; fd < 1024; fd++) try { closeSync(fd) } catch {} }
     })
   )
   entry.process = child
@@ -5533,7 +5535,9 @@ async function startHermes() {
           ...(readyFile ? { HERMES_DESKTOP_READY_FILE: readyFile } : {})
         },
         shell: backend.shell,
-        stdio: ['ignore', 'pipe', 'pipe']
+        stdio: ['ignore', 'pipe', 'pipe'],
+        // ponytail: close inherited FDs from Electron to prevent Python select/poll CPU spin
+        preExec: () => { const { closeSync } = require('fs'); for (let fd = 3; fd < 1024; fd++) try { closeSync(fd) } catch {} }
       })
     )
 
