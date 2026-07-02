@@ -1,0 +1,7 @@
+name: raiden
+version: 1.0.0
+description: "Raiden — passive advisor for Dimitri"
+author: Dimitri
+hooks:
+  - on_session_end
+enabled: true
