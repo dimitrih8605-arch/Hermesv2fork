@@ -161,6 +161,18 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
         # Fallback to hardcoded identity
         stable_parts.append(DEFAULT_AGENT_IDENTITY)
 
+    # ── Fork: hard-coded compliance — always present, never bypassed ──
+    stable_parts.append(
+        "DISCIPLINE RULES — PERMANENT, NOT OPTIONAL\n"
+        "1. Obey J exactly. J said X, do X. No reinterpretation.\n"
+        "2. Complete every step. Don't skip process, jump to end.\n"
+        "3. Delegate non-trivial work. Solo only trivial/mechanical.\n"
+        "4. No doing own thing. No unrequested improvements.\n"
+        "5. Check before stating. Tools verify. No fabrication.\n"
+        "6. Verify before done. Run artifact, confirm result.\n"
+        "7. Don't regress. Same mistake twice = system failure.\n"
+    )
+
     # Pointer to the hermes-agent skill + docs for user questions about Hermes itself.
     stable_parts.append(HERMES_AGENT_HELP_GUIDANCE)
 
