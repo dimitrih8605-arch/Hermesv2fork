@@ -6,6 +6,9 @@
  * Removes any stale unpacked app directory (`appOutDir`) before
  * electron-builder stages the Electron binaries into it.
  *
+ * Also patches electron/main.cjs with --single-process + --no-sandbox flags
+ * so rebuilds don't lose the fix (Chromium child processes crash on this host).
+ *
  * WHY THIS EXISTS
  * ---------------
  * electron-builder's final packaging step copies the stock `electron`
@@ -47,6 +50,7 @@
  */
 
 const fs = require('node:fs')
+const path = require('node:path')
 
 function cleanStaleAppOutDir(appOutDir) {
   if (!appOutDir || typeof appOutDir !== 'string') {
@@ -64,7 +68,61 @@ function cleanStaleAppOutDir(appOutDir) {
 
 exports.cleanStaleAppOutDir = cleanStaleAppOutDir
 
+/**
+ * Patch electron/main.cjs with --single-process + --no-sandbox flags.
+ * This host's Chromium child processes (zygote/GPU/network) all crash with
+ * error_code=1002 due to systemd transient scope collisions and shared memory
+ * kernel errors (errno 3 ESRCH). Single-process mode avoids spawning children.
+ */
+function patchMainCjs() {
+  const mainCjs = path.join(__dirname, '..', 'electron', 'main.cjs')
+  if (!fs.existsSync(mainCjs)) return false
+
+  let content = fs.readFileSync(mainCjs, 'utf8')
+
+  // Already patched — skip
+  if (content.includes('ponytail: --single-process')) return false
+
+  const oldBlock = (
+    'if (REMOTE_DISPLAY_REASON) {\n' +
+    '  app.disableHardwareAcceleration()\n' +
+    "  app.commandLine.appendSwitch('disable-gpu-compositing')\n" +
+    '  console.log(\n' +
+    '    `[hermes] remote display detected (${REMOTE_DISPLAY_REASON}); disabling GPU hardware acceleration to prevent flicker`\n' +
+    '  )\n' +
+    '}'
+  )
+
+  const newBlock = (
+    'if (REMOTE_DISPLAY_REASON) {\n' +
+    '  app.disableHardwareAcceleration()\n' +
+    "  app.commandLine.appendSwitch('disable-gpu-compositing')\n" +
+    '  // ponytail: --single-process + --no-sandbox works around systemd transient\n' +
+    '  // scope + shared memory kernel errors (errno 3 ESRCH) on this host.\n' +
+    '  // Chromium child processes (zygote/GPU/network) crash with error_code=1002.\n' +
+    "  app.commandLine.appendSwitch('single-process')\n" +
+    "  app.commandLine.appendSwitch('no-sandbox')\n" +
+    '  console.log(\n' +
+    '    `[hermes] remote display detected (${REMOTE_DISPLAY_REASON}); GPU disabled, single-process mode`\n' +
+    '  )\n' +
+    '}'
+  )
+
+  if (!content.includes(oldBlock)) {
+    console.warn('[before-pack] cannot patch main.cjs — pattern not found; hermes updated with different code?')
+    return false
+  }
+
+  content = content.replace(oldBlock, newBlock)
+  fs.writeFileSync(mainCjs, content, 'utf8')
+  console.log('[before-pack] patched electron/main.cjs: --single-process + --no-sandbox')
+  return true
+}
+
 exports.default = async function beforePack(context) {
+  // Apply persistent patches before staging so they end up in the asar
+  patchMainCjs()
+
   const appOutDir = context && context.appOutDir
   try {
     if (cleanStaleAppOutDir(appOutDir)) {
