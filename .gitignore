@@ -145,3 +145,4 @@ apps/desktop/demo/
 infographic/
 apps/desktop/app.asar
 apps/desktop/main.cjs
+apps/desktop/release.bak/

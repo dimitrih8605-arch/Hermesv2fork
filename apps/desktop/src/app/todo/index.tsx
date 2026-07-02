@@ -33,9 +33,9 @@ const DEFAULT_BOARD: TodoBoard = {
   columns: [
     { id: 'planned', title: 'Planned', profileKey: null },
     { id: 'col1', title: 'Executor 1', profileKey: 'dimitri' },
-    { id: 'col2', title: 'Executor 2', profileKey: 'agy' },
-    { id: 'col3', title: 'Executor 3', profileKey: 'omp' },
-    { id: 'col4', title: 'Executor 4', profileKey: 'cella' }
+    { id: 'col2', title: 'Executor 2', profileKey: 'dimitri-scout' },
+    { id: 'col3', title: 'Executor 3', profileKey: 'dimitri-coder' },
+    { id: 'col4', title: 'Executor 4', profileKey: 'dimitri-cella' }
   ],
   tasks: { planned: [], col1: [], col2: [], col3: [], col4: [] }
 }
@@ -63,9 +63,9 @@ function saveBoard(board: TodoBoard): void {
 
 const CODICON_NAMES: Record<string, string> = {
   dimitri: 'robot',
-  agy: 'eye',
-  omp: 'zap',
-  cella: 'comment-discussion',
+  'dimitri-scout': 'eye',
+  'dimitri-coder': 'zap',
+  'dimitri-cella': 'comment-discussion',
   default: 'symbol-misc'
 }
 
@@ -165,7 +165,7 @@ export function TodoView() {
 
   // ── Profile selection ────────────────────────────────────────────
 
-  const knownProfiles = ['dimitri', 'agy', 'omp', 'cella', 'default']
+  const knownProfiles = ['dimitri', 'dimitri-scout', 'dimitri-coder', 'dimitri-cella', 'default']
 
   // Merge live profiles from store with known defaults. No empty options.
   const allProfileKeys = useCallback(() => {
