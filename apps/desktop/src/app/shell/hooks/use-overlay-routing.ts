@@ -5,6 +5,7 @@ import { type CommandCenterSection } from '@/app/command-center'
 import {
   AGENTS_ROUTE,
   appViewForPath,
+  CALENDAR_ROUTE,
   COMMAND_CENTER_ROUTE,
   isOverlayView,
   NEW_CHAT_ROUTE,
@@ -25,6 +26,7 @@ export function useOverlayRouting() {
   const cronOpen = currentView === 'cron'
   const profilesOpen = currentView === 'profiles'
   const chatOpen = currentView === 'chat'
+  const calendarOpen = currentView === 'calendar'
   const overlayOpen = isOverlayView(currentView)
 
   // Overlay routes (settings/command-center/agents) stash the underlying path
@@ -65,6 +67,7 @@ export function useOverlayRouting() {
 
   return {
     agentsOpen,
+    calendarOpen,
     chatOpen,
     closeOverlayToPreviousRoute,
     commandCenterInitialSection,

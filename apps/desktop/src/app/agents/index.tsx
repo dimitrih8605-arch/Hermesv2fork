@@ -318,6 +318,7 @@ function SubagentRow({ node, depth = 0, nowMs }: { node: SubagentNode; depth?: n
   const fileLines = [...node.filesWritten.map(p => `+ ${p}`), ...node.filesRead.map(p => `· ${p}`)]
 
   const subtitle = [
+    node.name,
     node.model,
     fmtDuration(durationSeconds, t.agents),
     node.toolCount ? t.agents.toolsCount(node.toolCount) : '',

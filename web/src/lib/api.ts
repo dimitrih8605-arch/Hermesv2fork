@@ -670,6 +670,12 @@ export const api = {
         body: JSON.stringify({ content }),
       },
     ),
+  reorderProfiles: (orderedNames: string[]) =>
+    fetchJSON<{ ok: boolean }>("/api/profiles/order", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order: orderedNames }),
+    }),
 
   // Skills & Toolsets
   //

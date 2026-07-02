@@ -9,13 +9,17 @@ export const CRON_ROUTE = '/cron'
 export const PROFILES_ROUTE = '/profiles'
 export const AGENTS_ROUTE = '/agents'
 export const STARMAP_ROUTE = '/starmap'
+export const CALENDAR_ROUTE = '/calendar'
+export const EMAIL_ROUTE = '/email'
 
 export type AppView =
   | 'agents'
   | 'artifacts'
+  | 'calendar'
   | 'chat'
   | 'command-center'
   | 'cron'
+  | 'email'
   | 'messaging'
   | 'profiles'
   | 'settings'
@@ -25,8 +29,10 @@ export type AppView =
 export type AppRouteId =
   | 'agents'
   | 'artifacts'
+  | 'calendar'
   | 'command-center'
   | 'cron'
+  | 'email'
   | 'messaging'
   | 'new'
   | 'profiles'
@@ -47,6 +53,8 @@ export const APP_ROUTES = [
   { id: 'skills', path: SKILLS_ROUTE, view: 'skills' },
   { id: 'messaging', path: MESSAGING_ROUTE, view: 'messaging' },
   { id: 'artifacts', path: ARTIFACTS_ROUTE, view: 'artifacts' },
+  { id: 'calendar', path: CALENDAR_ROUTE, view: 'calendar' },
+  { id: 'email', path: EMAIL_ROUTE, view: 'email' },
   { id: 'cron', path: CRON_ROUTE, view: 'cron' },
   { id: 'profiles', path: PROFILES_ROUTE, view: 'profiles' },
   { id: 'agents', path: AGENTS_ROUTE, view: 'agents' },

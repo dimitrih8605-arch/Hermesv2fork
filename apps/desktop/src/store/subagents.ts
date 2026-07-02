@@ -17,6 +17,8 @@ export interface SubagentProgress {
   /** The child's own stored session id — lets UIs open its session window. */
   sessionId?: string
   model?: string
+  /** Optional display name for the agent role (e.g. "Scout", "Coder"). */
+  name?: string
   status: SubagentStatus
   taskCount: number
   taskIndex: number
@@ -163,6 +165,7 @@ function toProgress(payload: SubagentPayload, prev: SubagentProgress | undefined
     goal: str(payload.goal) || prev?.goal || 'Subagent',
     sessionId: str(payload.child_session_id) || prev?.sessionId,
     model: str(payload.model) || prev?.model,
+    name: str(payload.name) || prev?.name,
     status,
     taskCount: num(payload.task_count) ?? prev?.taskCount ?? 1,
     taskIndex: num(payload.task_index) ?? prev?.taskIndex ?? 0,

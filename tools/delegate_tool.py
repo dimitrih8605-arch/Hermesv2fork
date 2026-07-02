@@ -813,6 +813,7 @@ def _build_child_progress_callback(
     parent_id: Optional[str] = None,
     depth: Optional[int] = None,
     model: Optional[str] = None,
+    name: Optional[str] = None,
     toolsets: Optional[List[str]] = None,
     session_ref: Optional[Dict[str, Any]] = None,
 ) -> Optional[callable]:
@@ -860,6 +861,8 @@ def _build_child_progress_callback(
             kw["depth"] = depth
         if model is not None:
             kw["model"] = model
+        if name is not None:
+            kw["name"] = name
         if toolsets is not None:
             kw["toolsets"] = list(toolsets)
         # The child's own session id — filled into the shared ref once the
@@ -1052,6 +1055,7 @@ def _build_child_agent(
     max_iterations: int,
     task_count: int,
     parent_agent,
+    name: Optional[str] = None,
     # Credential overrides from delegation config (provider:model resolution)
     override_provider: Optional[str] = None,
     override_base_url: Optional[str] = None,
@@ -1173,6 +1177,7 @@ def _build_child_agent(
         parent_id=parent_subagent_id,
         depth=tui_depth,
         model=effective_model_for_cb,
+        name=name,
         toolsets=child_toolsets,
         session_ref=child_session_ref,
     )
@@ -2345,14 +2350,18 @@ def delegate_task(
     acp_args: Optional[List[str]] = None,
     role: Optional[str] = None,
     background: Optional[bool] = None,
+    name: Optional[str] = None,
     parent_agent=None,
 ) -> str:
-    """
-    Spawn one or more child agents to handle delegated tasks.
+    """Spawn one or more child agents to handle delegated tasks.
 
     Supports two modes:
-      - Single: provide goal (+ optional context, toolsets, role)
-      - Batch:  provide tasks array [{goal, context, toolsets, role}, ...]
+      - Single: provide goal (+ optional context, name, role)
+      - Batch:  provide tasks array [{goal, context, name, role}, ...]
+
+    The 'name' parameter labels the subagent in the spawn tree UI
+    (e.g. "Scout", "Coder") so each child is identifiable by role.
+    When omitted, only the goal and model are shown.
 
     The 'role' parameter controls whether a child can further delegate:
     'leaf' (default) cannot; 'orchestrator' retains the delegation
@@ -2445,7 +2454,7 @@ def delegate_task(
             )
         task_list = tasks
     elif goal and isinstance(goal, str) and goal.strip():
-        task_list = [{"goal": goal, "context": context, "role": top_role}]
+        task_list = [{"goal": goal, "context": context, "role": top_role, "name": name}]
     else:
         return tool_error("Provide either 'goal' (single task) or 'tasks' (batch).")
 
@@ -2496,6 +2505,7 @@ def delegate_task(
                 max_iterations=effective_max_iter,
                 task_count=n_tasks,
                 parent_agent=parent_agent,
+                name=t.get("name"),
                 override_provider=creds["provider"],
                 override_base_url=creds["base_url"],
                 override_api_key=creds["api_key"],

@@ -364,6 +364,9 @@ export default function ProfilesPage() {
 
   // Per-profile "set active" in-flight name
   const [settingActive, setSettingActive] = useState<string | null>(null);
+  // Drag-and-drop reorder state
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dropIdx, setDropIdx] = useState<number | null>(null);
 
   const modelKey = (provider: string | null, model: string | null) =>
     provider && model ? `${provider}\u0000${model}` : "";
@@ -513,6 +516,25 @@ export default function ProfilesPage() {
   };
 
   // Closes whichever editor dialog is open (model / description / SOUL).
+  // Drag-and-drop reorder handler
+  const handleReorder = useCallback(async (fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return;
+    const next = [...profiles];
+    const [moved] = next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, moved);
+    setProfiles(next);
+    api
+      .reorderProfiles(next.map((p) => p.name))
+      .catch((e) => {
+        showToast(`${t.status.error}: ${e}`, "error");
+        load();
+      })
+      .finally(() => {
+          setDragIdx(null);
+        setDropIdx(null);
+      });
+  }, [profiles, load, showToast, t.status.error]);
+
   const closeEditor = useCallback(() => {
     activeSoulRequest.current = null;
     activeDescRequest.current = null;
@@ -1032,7 +1054,35 @@ export default function ProfilesPage() {
             const isEditingModel = editingModelFor === p.name;
             const active = isActive(p);
             return (
-              <Card key={p.name} className="h-full">
+              <Card
+                key={p.name}
+                draggable={!isRenaming}
+                onDragStart={() => {
+                  const idx = profiles.indexOf(p);
+                  setDragIdx(idx);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  const idx = profiles.indexOf(p);
+                  if (idx !== dragIdx) setDropIdx(idx);
+                }}
+                onDragLeave={() => setDropIdx(null)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragIdx !== null) handleReorder(dragIdx, profiles.indexOf(p));
+                  setDragIdx(null);
+                  setDropIdx(null);
+                }}
+                onDragEnd={() => {
+                  setDragIdx(null);
+                  setDropIdx(null);
+                }}
+                className={cn(
+                  "h-full transition-shadow cursor-grab active:cursor-grabbing",
+                  dragIdx === profiles.indexOf(p) && "opacity-50",
+                  dropIdx === profiles.indexOf(p) && "ring-2 ring-primary",
+                )}
+              >
                 <CardContent className="flex h-full flex-col gap-2 py-4">
                   {isRenaming ? (
                     <div className="flex flex-col gap-2">

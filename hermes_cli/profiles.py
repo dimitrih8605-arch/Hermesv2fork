@@ -256,6 +256,43 @@ def _get_profiles_root() -> Path:
     return _get_default_hermes_home() / "profiles"
 
 
+def _get_order_path() -> Path:
+    """Return the path to the profile order file."""
+    return _get_profiles_root() / ".order.json"
+
+
+def _read_profile_order() -> List[str]:
+    """Read the custom profile order from ``.order.json``.
+
+    Returns an ordered list of profile names, or an empty list when
+    the file doesn't exist or is malformed. Never raises.
+    """
+    path = _get_order_path()
+    if not path.is_file():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(data, list) and all(isinstance(n, str) for n in data):
+            return data
+    except (json.JSONDecodeError, OSError):
+        pass
+    return []
+
+
+def _write_profile_order(ordered_names: List[str]) -> None:
+    """Write the custom profile order to ``.order.json``.
+
+    Creates the file atomically (write to temp, rename).
+    """
+    path = _get_order_path()
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(
+        json.dumps(ordered_names, indent=2),
+        encoding="utf-8",
+    )
+    tmp.replace(path)
+
+
 def _get_default_hermes_home() -> Path:
     """Return the default (pre-profile) HERMES_HOME path.
 
@@ -924,7 +961,31 @@ def list_profiles() -> List[ProfileInfo]:
                 description_auto=meta.get("description_auto", False),
             ))
 
+    # Apply custom order if set
+    custom_order = _read_profile_order()
+    if custom_order:
+        name_index = {name: i for i, name in enumerate(custom_order)}
+        # Profiles in custom order first, then unlisted ones sorted alphabetically
+        profiles.sort(key=lambda p: (
+            name_index.get(p.name, len(custom_order)),
+            p.name,
+        ))
+
     return profiles
+
+
+def reorder_profiles(ordered_names: List[str]) -> None:
+    """Persist a custom ordering for the profile list.
+
+    Only valid profile names are kept; unknown names are silently
+    dropped. Profiles not mentioned keep their relative position
+    after the ordered ones.
+    """
+    # Validate: keep only names that look like valid profile IDs.
+    valid = [n for n in ordered_names if _PROFILE_ID_RE.match(n)]
+    if not valid:
+        raise ValueError("No valid profile names in order list")
+    _write_profile_order(valid)
 
 
 def profiles_to_serve(multiplex: bool) -> List[Tuple[str, Path]]:

@@ -106,7 +106,7 @@ import { $terminalTakeover } from './right-sidebar/store'
 import { TerminalPaneChrome } from './right-sidebar/terminal/chrome'
 import { PersistentTerminal } from './right-sidebar/terminal/persistent'
 import { closeActiveTerminal } from './right-sidebar/terminal/terminals'
-import { CRON_ROUTE, NEW_CHAT_ROUTE, routeSessionId, sessionRoute, SETTINGS_ROUTE } from './routes'
+import { CRON_ROUTE, EMAIL_ROUTE, NEW_CHAT_ROUTE, routeSessionId, sessionRoute, SETTINGS_ROUTE } from './routes'
 import { SessionPickerOverlay } from './session-picker-overlay'
 import { SessionSwitcher } from './session-switcher'
 import { useContextSuggestions } from './session/hooks/use-context-suggestions'
@@ -139,6 +139,8 @@ const MessagingView = lazy(async () => ({ default: (await import('./messaging'))
 const ProfilesView = lazy(async () => ({ default: (await import('./profiles')).ProfilesView }))
 const SettingsView = lazy(async () => ({ default: (await import('./settings')).SettingsView }))
 const SkillsView = lazy(async () => ({ default: (await import('./skills')).SkillsView }))
+const CalendarView = lazy(async () => ({ default: (await import('./calendar')).CalendarView }))
+const EmailView = lazy(async () => ({ default: (await import('./email')).EmailView }))
 
 // Latest cron-job sessions surfaced in the collapsed "Cron jobs" section. The
 // Cron sessions are written by a background scheduler tick (the desktop
@@ -1193,6 +1195,22 @@ export function DesktopController() {
               </Suspense>
             }
             path="skills"
+          />
+          <Route
+            element={
+              <Suspense fallback={null}>
+                <CalendarView />
+              </Suspense>
+            }
+            path="calendar"
+          />
+          <Route
+            element={
+              <Suspense fallback={null}>
+                <EmailView />
+              </Suspense>
+            }
+            path="email"
           />
           <Route
             element={

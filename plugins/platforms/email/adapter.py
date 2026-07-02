@@ -165,7 +165,7 @@ def check_email_requirements() -> bool:
     left empty ``EMAIL_*`` keys in ``.env`` does not enable the platform (#40715).
     """
     addr = os.getenv("EMAIL_ADDRESS", "").strip()
-    pwd = os.getenv("EMAIL_PASSWORD", "").strip()
+    pwd = (os.getenv("EMAIL_PASSWORD") or os.getenv("GMAIL_APP_PASSWORD_DIMITRI") or os.getenv("GMAIL_APP_PASSWORD") or "").strip()
     imap = os.getenv("EMAIL_IMAP_HOST", "").strip()
     smtp = os.getenv("EMAIL_SMTP_HOST", "").strip()
     return all([addr, pwd, imap, smtp])
@@ -435,7 +435,7 @@ class EmailAdapter(BasePlatformAdapter):
         # instead of an obvious "host not set" error.
         extra = config.extra or {}
         self._address = (os.getenv("EMAIL_ADDRESS", "") or extra.get("address", "")).strip()
-        self._password = os.getenv("EMAIL_PASSWORD", "")
+        self._password = os.getenv("EMAIL_PASSWORD") or os.getenv("GMAIL_APP_PASSWORD_DIMITRI") or os.getenv("GMAIL_APP_PASSWORD") or ""
         self._imap_host = (os.getenv("EMAIL_IMAP_HOST", "") or extra.get("imap_host", "")).strip()
         self._imap_port = env_int("EMAIL_IMAP_PORT", 993)
         self._smtp_host = (os.getenv("EMAIL_SMTP_HOST", "") or extra.get("smtp_host", "")).strip()
@@ -1177,7 +1177,7 @@ async def _standalone_send(
 
     extra = getattr(pconfig, "extra", {}) or {}
     address = extra.get("address") or os.getenv("EMAIL_ADDRESS", "")
-    password = os.getenv("EMAIL_PASSWORD", "")
+    password = os.getenv("EMAIL_PASSWORD") or os.getenv("GMAIL_APP_PASSWORD_DIMITRI") or os.getenv("GMAIL_APP_PASSWORD") or ""
     smtp_host = extra.get("smtp_host") or os.getenv("EMAIL_SMTP_HOST", "")
     try:
         smtp_port = int(os.getenv("EMAIL_SMTP_PORT", "587"))

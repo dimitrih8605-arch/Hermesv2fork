@@ -95,7 +95,7 @@ import {
   setCurrentCwd
 } from '@/store/session'
 
-import { type AppView, ARTIFACTS_ROUTE, MESSAGING_ROUTE, SKILLS_ROUTE } from '../../routes'
+import { type AppView, ARTIFACTS_ROUTE, CALENDAR_ROUTE, EMAIL_ROUTE, MESSAGING_ROUTE, SKILLS_ROUTE } from '../../routes'
 import type { SidebarNavItem } from '../../types'
 
 import { countLabel } from './chrome'
@@ -143,7 +143,14 @@ const SIDEBAR_NAV: SidebarNavItem[] = [
     icon: props => <Codicon name="symbol-misc" {...props} />,
     route: SKILLS_ROUTE
   },
+  {
+    id: 'calendar',
+    label: '',
+    icon: props => <Codicon name="calendar" {...props} />,
+    route: CALENDAR_ROUTE
+  },
   { id: 'messaging', label: '', icon: props => <Codicon name="comment" {...props} />, route: MESSAGING_ROUTE },
+  { id: 'email', label: '', icon: props => <Codicon name="mail" {...props} />, route: EMAIL_ROUTE },
   { id: 'artifacts', label: '', icon: props => <Codicon name="files" {...props} />, route: ARTIFACTS_ROUTE }
 ]
 
@@ -1052,6 +1059,7 @@ export function ChatSidebar({
 
                 const active =
                   (item.id === 'skills' && currentView === 'skills') ||
+                  (item.id === 'calendar' && currentView === 'calendar') ||
                   (item.id === 'messaging' && currentView === 'messaging') ||
                   (item.id === 'artifacts' && currentView === 'artifacts')
 

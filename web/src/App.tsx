@@ -668,6 +668,10 @@ export default function App() {
               tooltipWarmRef={tooltipWarmRef}
             />
 
+            <SidebarProfileBar
+              collapsed={isDesktopCollapsed}
+            />
+
             <div
               className={cn(
                 "flex shrink-0 items-center gap-2",
@@ -888,6 +892,62 @@ function SidebarNavLink({
         <SidebarTooltip anchor={tooltipAnchor} label={navLabel} warmRef={tooltipWarmRef} />
       )}
     </li>
+  );
+}
+
+function SidebarProfileBar({
+  collapsed,
+}: {
+  collapsed: boolean;
+}) {
+  const { profiles, setProfile } = useProfileScope();
+  const navigate = useNavigate();
+  const VISIBLE = 8;
+
+  if (profiles.length < 2) return null;
+
+  const visible = profiles.slice(0, VISIBLE);
+  const extra = profiles.length - VISIBLE;
+
+  return (
+    <div
+      className={cn(
+        "flex shrink-0 flex-col",
+        "border-t border-current/10",
+        "py-1.5",
+        collapsed && "lg:hidden",
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-1 px-3">
+        {visible.map((name) => (
+          <button
+            key={name}
+            type="button"
+            onClick={() => setProfile(name)}
+            title={name}
+            className={cn(
+              "flex h-5 min-w-5 items-center justify-center rounded-sm px-1",
+              "text-[11px] font-medium font-mono uppercase tracking-wider",
+              "transition-colors",
+              "hover:bg-midground/10 hover:text-midground",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-midground",
+            )}
+          >
+            <span className="truncate max-w-[5rem]">{name}</span>
+          </button>
+        ))}
+        {extra > 0 && (
+          <button
+            type="button"
+            onClick={() => navigate("/profiles")}
+            title="All profiles"
+            className="flex h-5 items-center justify-center rounded-sm px-1 text-[11px] text-text-tertiary hover:text-midground"
+          >
+            +{extra}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
