@@ -428,6 +428,18 @@ def build_turn_context(
                 if not _compressor.should_compress(_preflight_tokens):
                     break
 
+    # Built-in advisor: hardcoded Raiden advisory — runs before plugin hooks
+    # so it always fires regardless of plugin system health.
+    _builtin_ctx = ""
+    try:
+        from agent.advisory import review_request, reset_count
+        reset_count()
+        _advice, _ = review_request(original_user_message, messages, reset=True)
+        if _advice:
+            _builtin_ctx = _advice
+    except Exception:
+        pass
+
     # Plugin hook: pre_llm_call (context injected into user message, not system prompt).
     plugin_user_context = ""
     try:
@@ -445,6 +457,8 @@ def build_turn_context(
             sender_id=getattr(agent, "_user_id", None) or "",
         )
         _ctx_parts: list[str] = []
+        if _builtin_ctx:
+            _ctx_parts.append(_builtin_ctx)
         for r in _pre_results:
             if isinstance(r, dict) and r.get("context"):
                 _ctx_parts.append(str(r["context"]))

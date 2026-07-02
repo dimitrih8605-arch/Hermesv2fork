@@ -779,8 +779,16 @@ def run_conversation(
                 agent.session_id or "-",
             )
 
-        # Re-fire pre_llm_call each iteration so Raiden gets fresh context
-        # with latest tool results before every reasoning step.
+        # Built-in advisor: hardcoded Raiden re-consult on each iteration.
+        try:
+            from agent.advisory import review_request
+            _advice, _ = review_request(original_user_message, messages)
+            if _advice:
+                _plugin_user_context = _advice
+        except Exception:
+            pass
+
+        # Plugin hook: pre_llm_call (re-fire each iteration).
         try:
             from hermes_cli.plugins import invoke_hook as _loop_hook
             _it_results = _loop_hook(
@@ -804,7 +812,7 @@ def run_conversation(
             if _it_parts:
                 _plugin_user_context = "\n\n".join(_it_parts)
         except Exception as exc:
-            logger.debug("pre_llm_call (iteration %s) failed: %s", api_call_count, exc)
+            logger.debug("pre_llm_call hook (iteration %s) failed: %s", api_call_count, exc)
 
         api_messages = []
         for idx, msg in enumerate(messages):
