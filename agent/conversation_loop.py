@@ -779,6 +779,33 @@ def run_conversation(
                 agent.session_id or "-",
             )
 
+        # Re-fire pre_llm_call each iteration so Raiden gets fresh context
+        # with latest tool results before every reasoning step.
+        try:
+            from hermes_cli.plugins import invoke_hook as _loop_hook
+            _it_results = _loop_hook(
+                "pre_llm_call",
+                session_id=agent.session_id,
+                task_id=effective_task_id,
+                turn_id=turn_id,
+                user_message=original_user_message,
+                conversation_history=list(messages),
+                is_first_turn=(api_call_count == 1 and not bool(conversation_history)),
+                model=agent.model,
+                platform=getattr(agent, "platform", None) or "",
+                sender_id=getattr(agent, "_user_id", None) or "",
+            )
+            _it_parts: list[str] = []
+            for r in _it_results:
+                if isinstance(r, dict) and r.get("context"):
+                    _it_parts.append(str(r["context"]))
+                elif isinstance(r, str) and r.strip():
+                    _it_parts.append(r)
+            if _it_parts:
+                _plugin_user_context = "\n\n".join(_it_parts)
+        except Exception as exc:
+            logger.debug("pre_llm_call (iteration %s) failed: %s", api_call_count, exc)
+
         api_messages = []
         for idx, msg in enumerate(messages):
             api_msg = msg.copy()
