@@ -2,5 +2,7 @@
 */
 !.gitignore
 !advisor.py
+!plugins/
 !plugins/raiden/
 !plugins/raiden/**
+**/__pycache__/**
