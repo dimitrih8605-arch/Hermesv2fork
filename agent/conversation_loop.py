@@ -785,6 +785,8 @@ def run_conversation(
             _advice, _ = review_request(original_user_message, messages)
             if _advice:
                 _plugin_user_context = _advice
+                if not agent.quiet_mode:
+                    agent._safe_print(_advice)
         except Exception:
             pass
 

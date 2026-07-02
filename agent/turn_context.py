@@ -437,6 +437,8 @@ def build_turn_context(
         _advice, _ = review_request(original_user_message, messages, reset=True)
         if _advice:
             _builtin_ctx = _advice
+            if not agent.quiet_mode:
+                agent._safe_print(_advice)
     except Exception:
         pass
 
