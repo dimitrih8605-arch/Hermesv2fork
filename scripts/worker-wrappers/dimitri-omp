@@ -1,0 +1,13 @@
+#!/bin/bash
+# dimitri-omp — Code via Oh My Pi (OMP) CLI
+# Usage: dimitri-omp "prompt"
+# Returns: OMP response in stdout. Uses -p for headless mode.
+
+OMP_BIN="/home/angkolj/.npm-global/bin/omp"
+
+if [ ! -f "$OMP_BIN" ]; then
+  echo "OMP UNAVAILABLE: omp not found at $OMP_BIN"
+  exit 2
+fi
+
+exec "$OMP_BIN" -p "$*" 2>&1

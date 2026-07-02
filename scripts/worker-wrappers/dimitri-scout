@@ -1,0 +1,35 @@
+#!/bin/bash
+# dimitri-scout — Research scout via Antigravity CLI (agy)
+# Usage: dimitri-scout "prompt"
+#        dimitri-scout --model "Model Name" "prompt"
+# Returns: agy analysis in stdout. Uses --print for headless mode.
+
+AGY_BIN="/home/angkolj/.local/bin/agy"
+
+# Availability check
+if [ ! -f "$AGY_BIN" ]; then
+  echo "SCOUT UNAVAILABLE: agy not found at $AGY_BIN"
+  exit 2
+fi
+
+# Extract --model flag if present (must come before --print)
+MODEL=""
+ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --model)
+      MODEL="$2"
+      shift 2
+      ;;
+    *)
+      ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [ -n "$MODEL" ]; then
+  exec "$AGY_BIN" --model "$MODEL" --print "${ARGS[*]}" 2>&1
+else
+  exec "$AGY_BIN" --print "${ARGS[*]}" 2>&1
+fi

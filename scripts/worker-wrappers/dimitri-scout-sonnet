@@ -1,0 +1,13 @@
+#!/bin/bash
+# dimitri-scout-sonnet — Research scout via Antigravity CLI (agy) with Claude Sonnet
+# Usage: dimitri-scout-sonnet "prompt"
+# Returns: agy analysis using Claude Sonnet 4.6 (Thinking)
+
+AGY_BIN="/home/angkolj/.local/bin/agy"
+
+if [ ! -f "$AGY_BIN" ]; then
+  echo "SCOUT UNAVAILABLE: agy not found at $AGY_BIN"
+  exit 2
+fi
+
+exec "$AGY_BIN" --model "Claude Sonnet 4.6 (Thinking)" --print "$*" 2>&1
