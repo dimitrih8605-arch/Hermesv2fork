@@ -4917,7 +4917,7 @@ async def get_env_vars(profile: Optional[str] = None):
             result[var_name] = _row(var_name, {})
     # Surface arbitrary/custom keys the user set in .env that aren't in any
     # catalog. These are always "set" (they're on disk). Treated as secrets by
-    # default (is_password=True → redacted, reveal-gated) since an unrecognised
+    # default (is_password=*** → redacted, reveal-gated) since an unrecognised
     # key could hold anything. Channel-managed credentials are excluded — those
     # belong to the Channels page. This makes the "add a custom key" surface
     # round-trip: a key added there reappears here under its own section.
@@ -11113,6 +11113,23 @@ async def rename_profile_endpoint(name: str, body: ProfileRename):
     return {"ok": True, "name": body.new_name, "path": str(path)}
 
 
+class ProfileOrder(BaseModel):
+    order: List[str]
+
+
+@app.put("/api/profiles/order")
+async def reorder_profiles_endpoint(body: ProfileOrder):
+    from hermes_cli import profiles as profiles_mod
+    try:
+        profiles_mod.reorder_profiles(body.order)
+        return {"ok": True}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        _log.exception("PUT /api/profiles/order failed")
+        raise HTTPException(status_code=500, detail="Failed to reorder profiles")
+
+
 @app.delete("/api/profiles/{name}")
 async def delete_profile_endpoint(name: str):
     """Delete a profile. The dashboard collects the user's confirmation in
@@ -12064,7 +12081,7 @@ async def get_models_analytics(days: int = 30, profile: Optional[str] = None):
 # WebSocket.  The browser renders the ANSI through xterm.js (see
 # web/src/pages/ChatPage.tsx).
 #
-# Auth: ``?token=<session_token>`` query param (browsers can't set
+# Auth: ``?token=*** query param (browsers can't set
 # Authorization on the WS upgrade).  Same ephemeral ``_SESSION_TOKEN`` as
 # REST.  Localhost-only — we defensively reject non-loopback clients even
 # though uvicorn binds to 127.0.0.1.
@@ -12136,7 +12153,7 @@ def _ws_client_is_allowed(ws: "WebSocket") -> bool:
     """Check if the WebSocket client IP is acceptable.
 
     Loopback bind: only loopback clients allowed — the legacy
-    ``?token=<_SESSION_TOKEN>`` path is the only auth we have, so we
+    ``?token=*** path is the only auth we have, so we
     don't want LAN hosts guessing tokens.
 
     Explicit non-loopback bind (``--host 0.0.0.0``, ``--host ::``, or a
@@ -12251,7 +12268,7 @@ def _ws_auth_reason(ws: "WebSocket") -> tuple[Optional[str], str]:
     ``internal``, ``token``, or ``none``) so the accepted path can log *how*
     a peer authed, not just that it did.
 
-    Loopback / ``--insecure``: legacy ``?token=<_SESSION_TOKEN>`` query
+    Loopback / ``--insecure``: legacy ``?token=*** query
     parameter, constant-time compared.
 
     Gated (public bind, no ``--insecure``): one of two credentials —
@@ -12432,7 +12449,7 @@ def _resolve_chat_argv(
 def _build_gateway_ws_url() -> Optional[str]:
     """ws:// URL the PTY child should attach to for JSON-RPC gateway traffic.
 
-    Loopback / ``--insecure``: ``?token=<_SESSION_TOKEN>``.
+    Loopback / ``--insecure``: ``?token=***
 
     Gated mode: the legacy token path is rejected by ``_ws_auth_ok``, so the
     server-spawned PTY child authenticates with the process-lifetime internal
@@ -12496,7 +12513,7 @@ async def _resolve_chat_argv_async(
 def _build_sidecar_url(channel: str) -> Optional[str]:
     """ws:// URL the PTY child should publish events to, or None when unbound.
 
-    Loopback / ``--insecure``: uses ``?token=<_SESSION_TOKEN>``.
+    Loopback / ``--insecure``: uses ``?token=***
 
     Gated mode: authenticates with the process-lifetime internal credential
     (``?internal=``), the same one ``_build_gateway_ws_url`` uses. The PTY
