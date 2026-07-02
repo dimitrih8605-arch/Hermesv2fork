@@ -95,7 +95,7 @@ import {
   setCurrentCwd
 } from '@/store/session'
 
-import { type AppView, ARTIFACTS_ROUTE, CALENDAR_ROUTE, EMAIL_ROUTE, MESSAGING_ROUTE, SKILLS_ROUTE } from '../../routes'
+import { type AppView, ARTIFACTS_ROUTE, CALENDAR_ROUTE, EMAIL_ROUTE, MESSAGING_ROUTE, SKILLS_ROUTE, TODO_ROUTE } from '../../routes'
 import type { SidebarNavItem } from '../../types'
 
 import { countLabel } from './chrome'
@@ -151,7 +151,8 @@ const SIDEBAR_NAV: SidebarNavItem[] = [
   },
   { id: 'messaging', label: '', icon: props => <Codicon name="comment" {...props} />, route: MESSAGING_ROUTE },
   { id: 'email', label: '', icon: props => <Codicon name="mail" {...props} />, route: EMAIL_ROUTE },
-  { id: 'artifacts', label: '', icon: props => <Codicon name="files" {...props} />, route: ARTIFACTS_ROUTE }
+  { id: 'artifacts', label: '', icon: props => <Codicon name="files" {...props} />, route: ARTIFACTS_ROUTE },
+  { id: 'todo', label: '', icon: props => <Codicon name="checklist" {...props} />, route: TODO_ROUTE }
 ]
 
 // Two modes via the `compact` height variant (styles.css):
@@ -1061,7 +1062,8 @@ export function ChatSidebar({
                   (item.id === 'skills' && currentView === 'skills') ||
                   (item.id === 'calendar' && currentView === 'calendar') ||
                   (item.id === 'messaging' && currentView === 'messaging') ||
-                  (item.id === 'artifacts' && currentView === 'artifacts')
+                  (item.id === 'artifacts' && currentView === 'artifacts') ||
+                  (item.id === 'todo' && currentView === 'todo')
 
                 const isNewSession = item.id === 'new-session'
 

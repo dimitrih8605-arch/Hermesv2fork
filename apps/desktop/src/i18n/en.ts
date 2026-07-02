@@ -209,6 +209,7 @@ export const en: Translations = {
       'nav.profiles': 'Open profiles',
       'nav.skills': 'Open skills',
       'nav.messaging': 'Open messaging',
+      'nav.email': 'Open email',
       'nav.artifacts': 'Open artifacts',
       'nav.cron': 'Open scheduled jobs',
       'nav.agents': 'Open agents',
@@ -1307,7 +1308,8 @@ export const en: Translations = {
       skills: 'Skills & Tools',
       messaging: 'Messaging',
       artifacts: 'Artifacts',
-      calendar: 'Calendar'
+      calendar: 'Calendar',
+      todo: 'Todo List'
     },
     searchAria: 'Search sessions',
     searchPlaceholder: 'Search sessions…',
