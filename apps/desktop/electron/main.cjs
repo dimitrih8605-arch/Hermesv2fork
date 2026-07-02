@@ -7618,5 +7618,8 @@ app.on('window-all-closed', () => {
   // the bundle and relaunch — without this the script's PID-wait spins to its
   // full timeout and the user is left with an invisible app (or an uninstall
   // that appears to do nothing).
-  if (process.platform !== 'darwin' || isQuittingForHandoff) app.quit()
+  if (process.platform !== 'darwin' || isQuittingForHandoff) {
+    try { fs.writeFileSync('/tmp/hermes-desktop-quit.sentinel', '') } catch {}
+    app.quit()
+  }
 })
