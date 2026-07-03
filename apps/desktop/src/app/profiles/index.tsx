@@ -203,6 +203,11 @@ export function ProfilesView({ onClose }: ProfilesViewProps) {
                         profile.is_default
                           ? []
                           : [
+                              {
+                                icon: 'star-empty',
+                                label: 'Set as default',
+                                onSelect: () => void window.hermesDesktop.profile.set(profile.name)
+                              },
                               { icon: 'edit', label: p.rename, onSelect: () => setPendingRename(profile) },
                               {
                                 icon: 'trash',
