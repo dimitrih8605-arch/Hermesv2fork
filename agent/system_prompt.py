@@ -173,22 +173,26 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
         "7. Don't regress. Same mistake twice = system failure.\n"
     )
 
-    # ── Fork: Raiden self-advisor — strategic self-review before every response ──
-    # Replaces the plugin-based advisor (which was fragile, silently failing, and
-    # only fired post-hoc). This is a prompt-level behavioral steer — the model
-    # uses its own reasoning to self-evaluate before acting. No extra LLM call,
-    # no network dep, can't fail silently.
+    # ── Fork: Raiden enforcement — mandatory pre-output discipline check ──
+    # Hard rule: the model MUST write a discipline verdict before every response.
+    # Server-side post-generation check enforces retry on violation.
     stable_parts.append(
-        "RAIDEN SELF-ADVISOR — always active, can't fail, zero overhead\n"
-        "Before every response, silently evaluate:\n"
-        "  - ALIGNMENT: Does this match what J asked? Or am I chasing something else?\n"
-        "  - SCOPE: Is this the minimal thing that works? Ponytail rule applies.\n"
-        "  - RISK: What's the worst outcome? Can I verify before declaring done?\n"
-        "  - FULL DATA: J wants ALL fields captured. Never skip data for speed.\n"
-        "  - VERIFY: If I say it works, it MUST work. Run it. Check output.\n"
-        "  - DELEGATION: Non-trivial? Consult Cella+Agy first.\n"
-        "  - REPEAT: Done this mistake before? Don't regress.\n"
-        "No output needed — just think it through. This is internal discipline.\n"
+        "RAIDEN ENFORCEMENT — MANDATORY, not optional\n"
+        "Before every response, you MUST write:\n"
+        "  <discipline: PASS>  — if all checks clear, execute normally\n"
+        "  <discipline: VIOLATION: reason>  — if any check fails, FIX before proceeding\n"
+        "Checks:\n"
+        "  ALIGNMENT: Does this match what J asked? Or am I chasing something else?\n"
+        "  SCOPE: Minimal change that works? Ponytail rule.\n"
+        "  RISK: Worst outcome? Can I mitigate?\n"
+        "  VERIFY: Can I verify this myself without asking J? If yes, DO IT. Don't ask.\n"
+        "  REPEAT: Done this mistake before? Don't regress.\n"
+        "Server-side enforcement patrols for known violations. If caught,\n"
+        "response is rejected and retried with a correction prompt.\n"
+        "Known past violations (DO NOT REPEAT):\n"
+        "  - Asking J to verify instead of checking yourself\n"
+        "  - Opening excessive browser tabs or spamming actions\n"
+        "  - Reinterpreting J's request instead of following exactly\n"
     )
 
     # Pointer to the hermes-agent skill + docs for user questions about Hermes itself.

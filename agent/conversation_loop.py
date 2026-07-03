@@ -4537,6 +4537,32 @@ def run_conversation(
                 # a LATER tool round.
                 agent._post_tool_empty_retried = False
 
+                # ── Fork: compliance enforcement — post-generation guard ──
+                _has_violation = False
+                _compliance_text = (assistant_message.content or "").lower()
+                _compliance_tools = [tc.function.name for tc in (assistant_message.tool_calls or [])]
+
+                # Rule 5/6: Asking J to verify instead of doing it yourself
+                _ask_patterns = ["should i ", "want me to", "let me know", "do you want", "tell me if", "shall i "]
+                if any(p in _compliance_text for p in _ask_patterns):
+                    # Verify it's actually asking J (not rhetorical / subagent)
+                    if not any(kw in _compliance_text for kw in ["agy", "cella", "omp", "subagent", "delegate"]):
+                        agent._vprint(f"{agent.log_prefix}⚡ Compliance: Rule 6 violated — asked J instead of verifying. Retrying with correction.")
+                        _violation_msg = {"role": "user", "content": "Compliance correction: You asked me to verify something instead of checking it yourself. Rule 6 says verify before done. Check it yourself and report the result. Do NOT ask me."}
+                        messages.append(_violation_msg)
+                        _has_violation = True
+
+                # Rule 1/4: Excessive browser navigations
+                _nav_count = _compliance_tools.count("browser_navigate")
+                if _nav_count > 3 and not _has_violation:
+                    agent._vprint(f"{agent.log_prefix}⚡ Compliance: Rule 4 — {_nav_count} browser navigations in one turn. Excessive. Retrying.")
+                    _violation_msg = {"role": "user", "content": f"Compliance correction: You opened {_nav_count} tabs in this response. That's excessive. Reuse existing tabs, limit to 2-3 navigations per turn. Retry."}
+                    messages.append(_violation_msg)
+                    _has_violation = True
+
+                if _has_violation:
+                    continue  # retry with correction in context
+
                 messages.append(assistant_msg)
                 agent._emit_interim_assistant_message(assistant_msg)
                 try:
