@@ -1,0 +1,6 @@
+name: moa-command
+version: 1.0.0
+description: "Gateway-level /cli-moa command — runs moa script for agy+omp presets"
+author: Dimitri
+hooks: []
+enabled: true
