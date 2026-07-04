@@ -432,8 +432,9 @@ def build_turn_context(
     # so it always fires regardless of plugin system health.
     _builtin_ctx = ""
     try:
-        from agent.advisory import review_request, reset_count
+        from agent.advisory import review_request, reset_count, reset_ending_review
         reset_count()
+        reset_ending_review()
         _advice, _ = review_request(original_user_message, messages, reset=True)
         if _advice:
             _builtin_ctx = _advice

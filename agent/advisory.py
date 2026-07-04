@@ -58,6 +58,15 @@ If issue: return ONE line with 🔴/⚠️/💡 prefix and the reasoning. Then �
 
 _RAIDEN_PREFIX = "⚡ Raiden:\n"
 
+# ── Ending review dedup (1 nudge per turn) ────────────────────────────────
+_ending_review_given = False
+
+
+def reset_ending_review() -> None:
+    """Reset ending-review nudge flag (per-turn)."""
+    global _ending_review_given
+    _ending_review_given = False
+
 
 # ── Per-conversation dedup ──────────────────────────────────────────────
 _last_msg_count = 0
@@ -212,3 +221,130 @@ def review_request(
     # Fallback
     advice = _rule_based_fallback(msg, risk_notes)
     return (f"{_RAIDEN_PREFIX}{advice}", len(conversation_history or [])) if advice else (None, len(conversation_history or []))
+
+
+# ── Ending review (VERIFY phase) ──────────────────────────────────────────
+
+_ENDING_REVIEW_PROMPT = """Review completion status.
+
+J asked: {request}
+
+Response produced:
+{response}
+
+Task context — messages leading to this response:
+{context}
+
+Check: is the response COMPLETE? Does it actually answer J's request?
+If YES: return exactly "COMPLETE"
+If NO: return "GAP: <one line describing what's missing>"
+
+Be strict. If J asked for a comparison and the response only analyzes part of it, that's a gap.
+If J asked for an implementation and the response only plans it, that's a gap.
+Table of contents or outline without follow-through = gap.
+Do NOT flag polishing/format issues — only flag substantive incompleteness."""
+
+
+def ending_review(
+    final_response: str,
+    original_user_message: str,
+    messages: list[dict],
+    api_call_count: int,
+) -> Optional[str]:
+    """Lightweight end-of-turn completeness check.
+
+    Returns:
+        None — response is complete, stay silent.
+        str — gap description, caller injects it as continuation nudge.
+              (Always un-prefixed — no ⚡ Raiden prefix — so it reads as
+              a neutral task-continuation hint, not separate advice.)
+    """
+    global _ending_review_given
+    if _ending_review_given:
+        return None  # one nudge per turn max
+
+    msg = (original_user_message or "").strip()
+    resp = (final_response or "").strip()
+
+    # Skip trivial responses (errors, empty, very short)
+    if not resp or len(resp) < 30:
+        return None
+    if not msg or _is_trivial(msg):
+        return None
+    # Low-effort turn — nothing to verify
+    if api_call_count < 2:
+        return None
+
+    # ── Rule-based fast path ─────────────────────────────────────────
+    # If J's message asks a question and response is very short
+    # (< 80 chars after stripping think blocks) or evasive, flag it.
+    if "?" in msg and len(resp) < 80:
+        _ending_review_given = True
+        return "GAP: J asked a question — response is very short for what was asked."
+
+    # If response is suspiciously short for a complex request
+    if len(msg) > 100 and len(resp) < 150:
+        _ending_review_given = True
+        return "GAP: Response seems too brief for the complexity of the request."
+
+    # ── LLM path ─────────────────────────────────────────────────────
+    api_key = get_api_key()
+    if not api_key:
+        return None
+
+    # Build compact context from last few messages
+    context_lines = []
+    for m in (messages or [])[-6:]:
+        role = m.get("role", "")
+        content = m.get("content", "")
+        if isinstance(content, list):
+            content = " ".join(
+                p.get("text", "") for p in content if p.get("type") == "text"
+            )
+        if content and role in ("user", "assistant"):
+            context_lines.append(f"{role}: {str(content)[:400]}")
+    context_text = "\n".join(context_lines)
+
+    prompt = _ENDING_REVIEW_PROMPT.format(
+        request=msg[:1000],
+        response=resp[:1500],
+        context=context_text[:800] if context_text else "(no context)",
+    )
+
+    try:
+        import httpx
+
+        with httpx.Client(timeout=10) as client:  # 10s — run at turn end, not on critical path
+            resp_api = client.post(
+                "https://opencode.ai/zen/go/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "minimax-m2.7",
+                    "messages": [
+                        {"role": "system", "content": _ADVISOR_SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "temperature": 0.1,
+                    "max_tokens": 100,
+                },
+            )
+            resp_api.raise_for_status()
+            data = resp_api.json()
+            result = (
+                data.get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "")
+                .strip()
+            )
+            if result and result.startswith("GAP:"):
+                _ending_review_given = True
+                # Strip "GAP:" prefix, keep the description
+                gap = result[4:].strip()
+                return f"The response appears incomplete: {gap}"
+    except Exception:
+        pass
+
+    return None

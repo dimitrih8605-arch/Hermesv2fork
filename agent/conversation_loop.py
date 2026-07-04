@@ -5140,6 +5140,36 @@ def run_conversation(
                                  agent._pre_verify_nudges)
                     continue
 
+                # ── Raiden ending review (VERIFY completeness) ─────────────
+                try:
+                    from agent.advisory import ending_review
+                    _ending_gap = ending_review(
+                        final_response=final_response,
+                        original_user_message=original_user_message,
+                        messages=messages,
+                        api_call_count=api_call_count,
+                    )
+                    if _ending_gap:
+                        # Inject as continuation nudge — same pattern as
+                        # verification_stop.  Keep the assistant message in
+                        # history, follow with a synthetic user nudge.
+                        final_msg["finish_reason"] = "ending_review"
+                        final_msg["_ending_review_synthetic"] = True
+                        messages.append(final_msg)
+                        messages.append({
+                            "role": "user",
+                            "content": _ending_gap,
+                            "_ending_review_synthetic": True,
+                        })
+                        agent._session_messages = messages
+                        logger.debug(
+                            "ending_review gap found — continuing: %s",
+                            _ending_gap[:120],
+                        )
+                        continue
+                except Exception as _ere:
+                    logger.debug("ending_review failed: %s", _ere)
+
                 messages.append(final_msg)
                 
                 _turn_exit_reason = f"text_response(finish_reason={finish_reason})"
