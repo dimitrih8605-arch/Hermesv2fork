@@ -1,7 +1,6 @@
 """
-Moa CLI — gateway-level slash command for multi-brain presets.
-Registered via plugin system so it persists across updates.
-Usage: /cli-moa <prompt>   or   /cli-moa 1 <prompt>   or   /cli-moa 2 <prompt>
+Moa CLI — gateway-level slash commands for multi-brain presets.
+/climoa, /climoa1, /climoa2 (and /cli-moa for backwards compat).
 """
 
 import logging
@@ -9,51 +8,38 @@ import subprocess
 import os
 
 logger = logging.getLogger("moa-command")
-
 MOA_SCRIPT = "/home/angkolj/.local/bin/moa"
 
-def register(ctx):
-    """Register /cli-moa slash command."""
-    ctx.register_command(
-        name="cli-moa",
-        handler=handle_cli_moa,
-        description="Run multi-brain MoA: agy+omp presets (1=agy+omp->cella, 2=agy+cella->dimitri)",
-        args_hint="<prompt>",
-    )
-    logger.info("[moa-command] /cli-moa registered")
+def _env():
+    e = os.environ.copy()
+    e["PATH"] = f"/home/angkolj/.local/bin:{e.get('PATH', '/usr/local/bin:/usr/bin:/bin')}"
+    return e
 
-def handle_cli_moa(raw_args: str) -> str:
-    """Run moa script with args, return output."""
-    text = raw_args.strip()
-    if not text:
-        return "Usage: /cli-moa [1|2] <prompt>\n  default: agy+omp->deepseek\n  1: agy+omp->cella\n  2: agy+cella->dimitri"
-
+def _run(cmd):
     try:
-        # ponytail: moa script reads $1 as prompt (single arg).
-        # If first token is a preset name, split it out.
-        first = text.split()[0] if text else ""
-        if first in ("1", "2", "p1", "p2"):
-            rest = text[len(first):].strip()
-            cmd = [MOA_SCRIPT, first, rest]
-        else:
-            cmd = [MOA_SCRIPT, text]
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=180, env=_env())
+        out, err = r.stdout.strip(), r.stderr.strip()
+        if r.returncode != 0: return f"Error (exit {r.returncode}):\n{err}"
+        return out or err or "No output"
+    except subprocess.TimeoutExpired: return "MoA timed out after 180s."
+    except FileNotFoundError: return f"Script not found: {MOA_SCRIPT}"
+    except Exception as e: logger.error(f"moa error: {e}"); return f"Error: {e}"
 
-        env = os.environ.copy()
-        env["PATH"] = f"/home/angkolj/.local/bin:{env.get('PATH', '/usr/local/bin:/usr/bin:/bin')}"
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=180, env=env,
-        )
-        out = result.stdout.strip()
-        err = result.stderr.strip()
-        if result.returncode != 0:
-            return f"Error (exit {result.returncode}):\n{err}"
-        if not out and err:
-            return err
-        return out
-    except subprocess.TimeoutExpired:
-        return "MoA timed out after 180s. One of the agents hung."
-    except FileNotFoundError:
-        return f"MoA script not found at {MOA_SCRIPT}"
-    except Exception as e:
-        logger.error(f"cli-moa error: {e}")
-        return f"MoA error: {e}"
+def _mk_handler(preset):
+    def h(raw_args):
+        a = raw_args.strip()
+        if not a:
+            name = "climoa" + (" " + preset if preset else "")
+            return f"Usage: /{name} <prompt>"
+        return _run([MOA_SCRIPT] + ([preset] if preset else []) + [a])
+    return h
+
+def register(ctx):
+    for name, desc, preset in [
+        ("climoa", "Run multi-brain MoA: agy+omp presets", ""),
+        ("climoa1", "MoA preset 1: agy+omp → Cella", "1"),
+        ("climoa2", "MoA preset 2: agy+Cella → Dimitri synth", "2"),
+        ("cli-moa", "Alias for /climoa", ""),  # backwards compat
+    ]:
+        ctx.register_command(name=name, handler=_mk_handler(preset), description=desc, args_hint="<prompt>")
+    logger.info("[moa-command] /climoa /climoa1 /climoa2 registered")
