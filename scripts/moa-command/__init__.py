@@ -6,7 +6,7 @@ Usage: /cli-moa <prompt>   or   /cli-moa 1 <prompt>   or   /cli-moa 2 <prompt>
 
 import logging
 import subprocess
-import shlex
+import os
 
 logger = logging.getLogger("moa-command")
 
@@ -24,18 +24,24 @@ def register(ctx):
 
 def handle_cli_moa(raw_args: str) -> str:
     """Run moa script with args, return output."""
-    if not raw_args.strip():
+    text = raw_args.strip()
+    if not text:
         return "Usage: /cli-moa [1|2] <prompt>\n  default: agy+omp->deepseek\n  1: agy+omp->cella\n  2: agy+cella->dimitri"
 
     try:
-        # Build command: moa script takes prompt or preset+prompt
-        cmd = [MOA_SCRIPT] + shlex.split(raw_args)
+        # ponytail: moa script reads $1 as prompt (single arg).
+        # If first token is a preset name, split it out.
+        first = text.split()[0] if text else ""
+        if first in ("1", "2", "p1", "p2"):
+            rest = text[len(first):].strip()
+            cmd = [MOA_SCRIPT, first, rest]
+        else:
+            cmd = [MOA_SCRIPT, text]
+
+        env = os.environ.copy()
+        env["PATH"] = f"/home/angkolj/.local/bin:{env.get('PATH', '/usr/local/bin:/usr/bin:/bin')}"
         result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=180,
-            env=None,  # inherit env
+            cmd, capture_output=True, text=True, timeout=180, env=env,
         )
         out = result.stdout.strip()
         err = result.stderr.strip()
