@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { type MutableRefObject, useCallback } from 'react'
 
+import { PROMPT_SUBMIT_REQUEST_TIMEOUT_MS } from '@/hermes'
 import { writeAgentTerminalChunk } from '@/app/right-sidebar/terminal/agent-terminal-stream'
 import { readActiveTerminal } from '@/app/right-sidebar/terminal/buffer'
 import { closeAgentTerminalByProc } from '@/app/right-sidebar/terminal/terminals'
@@ -37,6 +38,7 @@ import {
   setYoloActive
 } from '@/store/session'
 import { clearSessionSubagents, pruneDelegateFallbackSubagents, upsertSubagent } from '@/store/subagents'
+import { $queuedPromptsBySession, removeQueuedPrompt } from '@/store/composer-queue'
 import { recordToolDiff } from '@/store/tool-diffs'
 import { notifyWorkspaceChanged, toolMayMutateFiles } from '@/store/workspace-events'
 import type { RpcEvent } from '@/types/hermes'
@@ -332,6 +334,28 @@ export function useGatewayEventHandler(deps: GatewayEventDeps) {
           // Cleared when they open the app via the mail icon or refocus the window.
           if (typeof document !== 'undefined' && !document.hasFocus()) {
             markPetUnread()
+          }
+        } else {
+          // Background session drain: a non-active session just finished its
+          // turn. If it has queued prompts (user typed while busy, then switched
+          // away), auto-submit the next one so the queue advances even when the
+          // user is viewing a different session. Without this, queued prompts
+          // for background sessions are stranded until the user navigates back.
+          const queued = $queuedPromptsBySession.get()[sessionId]
+          if (queued && queued.length > 0) {
+            const next = queued[0]
+            const gateway = $gateway.get()
+            if (gateway && next.text.trim()) {
+              gateway
+                .request('prompt.submit', { session_id: sessionId, text: next.text }, PROMPT_SUBMIT_REQUEST_TIMEOUT_MS)
+                .then(() => {
+                  removeQueuedPrompt(sessionId, next.id)
+                })
+                .catch(() => {
+                  // submit failed — leave in queue so the user can retry
+                  // manually when they navigate back
+                })
+            }
           }
         }
 
