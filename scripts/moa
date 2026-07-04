@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# moa — Multi-brain preset runner. Show live output.
+# Usage: moa [preset] "question"
+# Presets: default (agy+omp→ds), 1 (agy+omp→cella), 2 (agy+cella→ds)
+
+_get_key() { python3 -c "
+import re
+for p in ['/home/angkolj/.hermes/profiles/dimitri/.env','/home/angkolj/.hermes/.env']:
+    try:
+        with open(p) as f:
+            for line in f:
+                m = re.match(r'^(export )?OPENCODE_GO_API_KEY=(.+)', line)
+                if m: print(m.group(2)); break
+    except: pass
+"
+}
+
+_synth() {
+    local key=$1 sys=$2 prompt=$3
+    local data=$(python3 -c "import json,sys; print(json.dumps({'model':'deepseek-v4-pro','messages':[{'role':'system','content':sys.argv[1]},{'role':'user','content':sys.argv[2]}]}))" "$sys" "$prompt")
+    curl -s https://opencode.ai/zen/go/v1/chat/completions \
+      -H "Authorization: Bearer $key" -H "Content-Type: application/json" -d "$data" \
+      | python3 -c "import sys,json; print(json.load(sys.stdin).get('choices',[{}])[0].get('message',{}).get('content','FAIL'))"
+}
+
+# Parse: first arg = preset if digit
+PRESET="default"
+if [ $# -ge 2 ]; then
+    case "$1" in 1|p1) PRESET="preset1"; shift ;; 2|p2) PRESET="preset2"; shift ;; esac
+fi
+PROMPT="${1:-$(cat)}"
+[ -z "$PROMPT" ] && echo "Usage: moa [1|2] \"<prompt>\"" && exit 1
+
+KEY=$(_get_key)
+[ -z "$KEY" ] && echo "No OPENCODE_GO_API_KEY found" && exit 1
+
+case "$PRESET" in
+default|preset1)
+    echo "─── agy (Gemini) running..."
+    AGY=$(dimitri-scout "$PROMPT" 2>/dev/null)
+    echo "$AGY"
+    echo ""
+    echo "─── omp (DeepSeek/Claude) running..."
+    OMP=$(dimitri-omp "$PROMPT" 2>/dev/null)
+    echo "$OMP"
+    echo ""
+    if [ "$PRESET" = "default" ]; then
+        echo "─── Synthesis (deepseek-v4-pro) ───"
+        _synth "$KEY" "Synthesize best answer from two AI agents. Keep what each got right, resolve contradictions. No meta-commentary." "PROMPT: $PROMPT\n\nAgent 1 (agy): $AGY\n\nAgent 2 (omp): $OMP"
+    else
+        echo "─── Cella Synthesis ───"
+        dimitri-cella-consult "{\"task\":\"Synthesize answer from two advisors\",\"context\":{\"prompt\":\"$PROMPT\",\"agy\":\"$(echo "$AGY"|head -c 2000)\",\"omp\":\"$(echo "$OMP"|head -c 2000)\"}}"
+    fi
+    ;;
+
+preset2)
+    echo "─── agy (Gemini) running..."
+    AGY=$(dimitri-scout "$PROMPT" 2>/dev/null)
+    echo "$AGY"
+    echo ""
+    echo "─── cella (Strategic Advisor) running..."
+    CELLA=$(dimitri-cella-consult "{\"task\":\"$PROMPT\",\"context\":{}}" 2>/dev/null)
+    echo "$CELLA"
+    echo ""
+    echo "─── Dimitri Synthesis ───"
+    _synth "$KEY" "You are Dimitri, blunt and practical. Synthesize the best combined answer from two AI advisors. Keep what each got right, resolve contradictions. Be direct." "PROMPT: $PROMPT\n\nAgent 1 (agy): $AGY\n\nAgent 2 (cella): $CELLA"
+    ;;
+
+*)
+    echo "Unknown preset: $PRESET" >&2; exit 1
+    ;;
+esac
