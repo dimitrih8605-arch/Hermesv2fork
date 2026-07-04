@@ -856,7 +856,7 @@ export default function SessionsPage() {
         .then(setStatus)
         .catch(() => {});
       api
-        .getSessions(50)
+        .getSessions(50, 0, undefined, "recent")
         .then((r) => {
           setOverviewSessions(r.sessions);
           // The dashboard server and a terminal CLI are separate

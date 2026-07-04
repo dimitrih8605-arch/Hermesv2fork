@@ -339,11 +339,10 @@ export function ChatSidebar({
     [sessions, showAllProfiles, profileScope]
   )
 
-  // Agent session order is pinned to creation time (started_at), NOT activity —
-  // a new message must never float a session to the top. Position only changes
-  // for a brand-new session or an explicit manual drag (agentOrderIds).
+  // Agent session order: last-active-first. Working on an older session bumps
+  // it toward the top — keeps recent activity visible without manual drag.
   const sortedSessions = useMemo(
-    () => [...visibleSessions].sort((a, b) => (b.started_at || 0) - (a.started_at || 0)),
+    () => [...visibleSessions].sort((a, b) => (b.last_active || 0) - (a.last_active || 0)),
     [visibleSessions]
   )
 
