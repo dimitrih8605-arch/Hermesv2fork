@@ -27,11 +27,20 @@ _TRIVIAL_PATTERNS = [
 ]
 
 # ── Risk patterns (rule-based fallback when LLM unavailable) ────────────
+# ── Close-loop confirmation: action verbs that need J's explicit ok ──
+_CONFIRM_ACTIONS = re.compile(
+    r"\b(do|make|create|run|execute|fix|implement|build|change|deploy|install|"
+    r"configure|set\s*up|write|patch|modify|delete|remove|add|update)\b",
+    re.I,
+)
+
 _RISK_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"(?:give|show|expose|reveal|print|dump|leak)\s+(?:me\s+)?(?:the\s+)?(?:api\s+)?(?:key|token|secret|password|credential)", re.I), "⚠️ Credential exposure — sure J wants this visible?"),
     (re.compile(r"(?:delete|remove|wipe|destroy|clear)\s+(?:all\s+)?(?:data|everything|database|table|collection|dir)", re.I), "⚠️ Destructive action — verify scope first"),
     (re.compile(r"(?:skip|bypass|ignore|disable)\s+(?:all\s+)?(?:safety|security|guard|check|validation)", re.I), "⚠️ Bypassing safety — J should confirm"),
     (re.compile(r"(?:refactor|rewrite|restructure|reorganize)\s+(?:entire|whole|all|everything)", re.I), "⚠️ Large refactor — scope creep risk"),
+    (re.compile(r"^(?=.*\b(?:do|make|create|run|execute|fix|implement|build|change|write|patch|modify|delete|remove)\b)(?=.*\b(?:the|this|that|it|these|those)\b)", re.I),
+     "🤚 J gave action task — restate and confirm before executing"),
 ]
 
 _ADVISOR_SYSTEM_PROMPT = (
