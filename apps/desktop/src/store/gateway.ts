@@ -276,6 +276,20 @@ export function pruneSecondaryGateways(keep: Set<string>): void {
   }
 }
 
+// Resolve the gateway socket for a specific profile. Returns null when the
+// profile isn't connected (no secondary open, and not the primary). Used by
+// the background queue drain to submit queued prompts through the correct
+// profile's backend instead of the active (possibly different) gateway.
+export function getGatewayForProfile(profile: string): HermesGateway | null {
+  const key = normKey(profile)
+
+  if (key === primaryProfile) {
+    return primaryGateway
+  }
+
+  return secondaries.get(key)?.gateway ?? null
+}
+
 export function closeSecondaryGateways(): void {
   for (const entry of secondaries.values()) {
     entry.wantOpen = false

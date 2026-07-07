@@ -15,7 +15,7 @@ import { isProviderSetupErrorMessage } from '@/lib/provider-setup-errors'
 import { clearClarifyRequest, setClarifyRequest } from '@/store/clarify'
 import { setSessionCompacting } from '@/store/compaction'
 import { refreshBackgroundProcesses } from '@/store/composer-status'
-import { $gateway } from '@/store/gateway'
+import { $gateway, getGatewayForProfile } from '@/store/gateway'
 import { dispatchNativeNotification } from '@/store/native-notifications'
 import { notify } from '@/store/notifications'
 import { requestDesktopOnboarding } from '@/store/onboarding'
@@ -24,6 +24,7 @@ import { followActiveSessionCwd } from '@/store/projects'
 import { clearAllPrompts, setApprovalRequest, setSecretRequest, setSudoRequest } from '@/store/prompts'
 import {
   $currentCwd,
+  $sessions,
   setCurrentBranch,
   setCurrentCwd,
   setCurrentFastMode,
@@ -344,7 +345,17 @@ export function useGatewayEventHandler(deps: GatewayEventDeps) {
           const queued = $queuedPromptsBySession.get()[sessionId]
           if (queued && queued.length > 0) {
             const next = queued[0]
-            const gateway = $gateway.get()
+            // Resolve the correct gateway for this session's profile instead of
+            // using the active gateway ($gateway.get()) which may belong to a
+            // different profile. Without this, the prompt.submit goes to the
+            // wrong backend and silently fails.
+            const storedId = explicitSid || sessionId
+            const sessions = $sessions.get()
+            const sessionInfo = sessions.find(
+              s => s.id === storedId || s._lineage_root_id === storedId
+            )
+            const profile = sessionInfo?.profile
+            const gateway = profile ? getGatewayForProfile(profile) ?? $gateway.get() : $gateway.get()
             if (gateway && next.text.trim()) {
               gateway
                 .request('prompt.submit', { session_id: sessionId, text: next.text }, PROMPT_SUBMIT_REQUEST_TIMEOUT_MS)
