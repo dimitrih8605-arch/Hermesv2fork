@@ -1,71 +1,118 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 
-# moa — Multi-brain preset runner. Show live output.
+# moa — Multi-brain preset runner. Fast parallel mode.
 # Usage: moa [preset] "question"
-# Presets: default (agy+omp→ds), 1 (agy+omp→cella), 2 (agy+cella→ds)
+#        moa [preset] --raw "question"  (sub-agents only, no synthesis)
+# Presets: default|1 (agy+omp→ds synth), 2 (agy+brain→Dimitri synth)
 
-_get_key() { python3 -c "
-import re
+TIMEOUT=120
+
+# ── helpers ────────────────────────────────────────────────────────
+
+_get_key() {
+    local k="${OPENCODE_GO_API_KEY:-}"
+    [ -n "$k" ] && [ ${#k} -eq 67 ] && echo "$k" && return
+    k="${OPENCODE_GO_API_KEY2:-}"
+    [ -n "$k" ] && [ ${#k} -eq 67 ] && echo "$k" && return
+    python3 -c "
+import os, re
+for var in ('OPENCODE_GO_API_KEY2', 'OPENCODE_GO_API_KEY'):
+    k = os.environ.get(var, '')
+    if len(k) == 67: print(k); exit(0)
 for p in ['/home/angkolj/.hermes/profiles/dimitri/.env','/home/angkolj/.hermes/.env']:
     try:
         with open(p) as f:
             for line in f:
-                m = re.match(r'^(export )?OPENCODE_GO_API_KEY=(.+)', line)
-                if m: print(m.group(2)); break
+                for var in ('OPENCODE_GO_API_KEY2', 'OPENCODE_GO_API_KEY'):
+                    m = re.match(r'^(export )?' + var + r'=(.+)', line)
+                    if m:
+                        v = m.group(2).strip()
+                        if len(v) == 67: print(v); exit(0)
     except: pass
-"
+" 2>/dev/null
 }
 
-_synth() {
-    local key=$1 sys=$2 prompt=$3
-    local data=$(python3 -c "import json,sys; print(json.dumps({'model':'deepseek-v4-pro','messages':[{'role':'system','content':sys.argv[1]},{'role':'user','content':sys.argv[2]}]}))" "$sys" "$prompt")
-    curl -s https://opencode.ai/zen/go/v1/chat/completions \
-      -H "Authorization: Bearer $key" -H "Content-Type: application/json" -d "$data" \
-      | python3 -c "import sys,json; print(json.load(sys.stdin).get('choices',[{}])[0].get('message',{}).get('content','FAIL'))"
+_api() {
+    local model=$1 sys=$2 prompt=$3
+    local data=$(python3 -c "import json,sys; print(json.dumps({'model':sys.argv[1],'messages':[{'role':'system','content':sys.argv[2]},{'role':'user','content':sys.argv[3]}]}))" "$model" "$sys" "$prompt")
+    timeout $TIMEOUT curl -s https://opencode.ai/zen/go/v1/chat/completions \
+      -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d "$data" \
+      | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('choices',[{}])[0].get('message',{}).get('content',''))"
 }
 
-# Parse: first arg = preset if digit
+BRAIN_CMD="python3 /home/angkolj/.hermes/grow/scripts/brain.py query"
+DIMITRI_SYS="You are Dimitri, blunt and practical. Synthesize the best combined answer from two AI advisors. Keep what each got right, resolve contradictions. Be direct."
+
+# ── main ───────────────────────────────────────────────────────────
+
 PRESET="default"
+RAW=false
+ARGS=()
+for arg in "$@"; do
+    case "$arg" in
+        --raw) RAW=true ;;
+        *) ARGS+=("$arg") ;;
+    esac
+done
+set -- "${ARGS[@]}"
+
 if [ $# -ge 2 ]; then
     case "$1" in 1|p1) PRESET="preset1"; shift ;; 2|p2) PRESET="preset2"; shift ;; esac
 fi
-PROMPT="${1:-$(cat)}"
-[ -z "$PROMPT" ] && echo "Usage: moa [1|2] \"<prompt>\"" && exit 1
+RAW_PROMPT="${1:-$(cat)}"
+[ -z "$RAW_PROMPT" ] && echo "Usage: moa [1|2] \"<prompt>\"" && exit 1
 
 KEY=$(_get_key)
-[ -z "$KEY" ] && echo "No OPENCODE_GO_API_KEY found" && exit 1
+[ -z "$KEY" ] && echo "No valid OPENCODE_GO_API_KEY found" && exit 1
+export OPENCODE_GO_API_KEY=***
 
 case "$PRESET" in
 default|preset1)
-    echo "─── agy (Gemini) running..."
-    AGY=$(dimitri-scout "$PROMPT" 2>/dev/null)
-    echo "$AGY"
-    echo ""
-    echo "─── omp (DeepSeek/Claude) running..."
-    OMP=$(dimitri-omp "$PROMPT" 2>/dev/null)
-    echo "$OMP"
-    echo ""
+    A_TMP=$(mktemp); O_TMP=$(mktemp)
+    echo "─── agy (Gemini) running..." >&2
+    timeout $TIMEOUT dimitri-scout "$RAW_PROMPT" > "$A_TMP" 2>/dev/null &
+    A_PID=$!
+    echo "─── omp (DeepSeek/Claude) running..." >&2
+    timeout $TIMEOUT dimitri-omp "$RAW_PROMPT" > "$O_TMP" 2>/dev/null &
+    O_PID=$!
+    wait $A_PID $O_PID 2>/dev/null
+    AGY=$(cat "$A_TMP"); OMP=$(cat "$O_TMP"); rm -f "$A_TMP" "$O_TMP"
+    if $RAW; then
+        echo "AGY: $AGY"
+        echo "---"
+        echo "OMP: $OMP"
+        exit 0
+    fi
+    echo "$AGY"; echo ""; echo "$OMP"; echo ""
     if [ "$PRESET" = "default" ]; then
         echo "─── Synthesis (deepseek-v4-pro) ───"
-        _synth "$KEY" "Synthesize best answer from two AI agents. Keep what each got right, resolve contradictions. No meta-commentary." "PROMPT: $PROMPT\n\nAgent 1 (agy): $AGY\n\nAgent 2 (omp): $OMP"
+        _api "deepseek-v4-pro" "Synthesize best answer from two AI agents. Keep what each got right, resolve contradictions. No meta-commentary." "PROMPT: $RAW_PROMPT\n\nAgent 1 (agy): $AGY\n\nAgent 2 (omp): $OMP"
     else
-        echo "─── Cella Synthesis ───"
-        dimitri-cella-consult "{\"task\":\"Synthesize answer from two advisors\",\"context\":{\"prompt\":\"$PROMPT\",\"agy\":\"$(echo "$AGY"|head -c 2000)\",\"omp\":\"$(echo "$OMP"|head -c 2000)\"}}"
+        echo "─── Dimitri Synthesis ───"
+        _api "deepseek-v4-pro" "$DIMITRI_SYS" "Synthesize answer from two advisors.\nPROMPT: $RAW_PROMPT\n\nAgent 1 (agy): $AGY\n\nAgent 2 (omp): $OMP"
     fi
     ;;
 
 preset2)
-    echo "─── agy (Gemini) running..."
-    AGY=$(dimitri-scout "$PROMPT" 2>/dev/null)
-    echo "$AGY"
-    echo ""
-    echo "─── cella (Strategic Advisor) running..."
-    CELLA=$(dimitri-cella-consult "{\"task\":\"$PROMPT\",\"context\":{}}" 2>/dev/null)
-    echo "$CELLA"
-    echo ""
+    A_TMP=$(mktemp); B_TMP=$(mktemp)
+    echo "─── agy (Gemini) running..." >&2
+    timeout $TIMEOUT dimitri-scout "$RAW_PROMPT" > "$A_TMP" 2>/dev/null &
+    A_PID=$!
+    echo "─── brain (local knowledge) running..." >&2
+    $BRAIN_CMD "$RAW_PROMPT" > "$B_TMP" 2>/dev/null &
+    B_PID=$!
+    wait $A_PID $B_PID 2>/dev/null
+    AGY=$(cat "$A_TMP"); BRAIN_OUT=$(cat "$B_TMP"); rm -f "$A_TMP" "$B_TMP"
+    if $RAW; then
+        echo "AGY: $AGY"
+        echo "---"
+        echo "BRAIN: $BRAIN_OUT"
+        exit 0
+    fi
+    echo "$AGY"; echo ""; echo "$BRAIN_OUT"; echo ""
     echo "─── Dimitri Synthesis ───"
-    _synth "$KEY" "You are Dimitri, blunt and practical. Synthesize the best combined answer from two AI advisors. Keep what each got right, resolve contradictions. Be direct." "PROMPT: $PROMPT\n\nAgent 1 (agy): $AGY\n\nAgent 2 (cella): $CELLA"
+    _api "deepseek-v4-pro" "$DIMITRI_SYS" "PROMPT: $RAW_PROMPT\n\nAgent 1 (agy): $AGY\n\nAgent 2 (brain): $BRAIN_OUT"
     ;;
 
 *)
