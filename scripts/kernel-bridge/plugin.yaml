@@ -1,0 +1,6 @@
+name: kernel-bridge
+version: 1.0.0
+description: "Auto-initialize Hermes Kernel on profile boot."
+author: Dimitri
+hooks: []
+enabled: true
