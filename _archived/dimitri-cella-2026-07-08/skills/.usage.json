@@ -1,0 +1,54 @@
+{
+  "kanban-orchestrator": {
+    "archived_at": null,
+    "created_at": "2026-06-15T15:04:50.275754+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-15T15:04:50.280720+00:00",
+    "last_viewed_at": "2026-06-15T15:04:50.275769+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
+  "kanban-worker": {
+    "archived_at": null,
+    "created_at": "2026-06-15T15:04:54.635643+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-15T15:04:54.637024+00:00",
+    "last_viewed_at": "2026-06-15T15:04:54.635668+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
+  "knowledge-cortex": {
+    "archived_at": null,
+    "created_at": "2026-06-26T05:38:50.873631+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-26T05:39:34.282571+00:00",
+    "last_viewed_at": "2026-06-26T05:39:34.280979+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 2,
+    "view_count": 2
+  },
+  "session-knowledge-boot": {
+    "archived_at": null,
+    "created_at": "2026-06-12T16:52:56.895799+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-22T18:29:33.366622+00:00",
+    "last_viewed_at": "2026-06-22T18:29:33.365431+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 7,
+    "view_count": 7
+  }
+}

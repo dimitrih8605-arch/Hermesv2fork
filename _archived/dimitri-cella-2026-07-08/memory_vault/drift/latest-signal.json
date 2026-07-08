@@ -1,0 +1,11 @@
+{
+  "schema": "cella_eye.v1",
+  "ts": "2026-07-03T16:05:18Z",
+  "state_changed": false,
+  "diff_fields": "",
+  "cron_total": 58,
+  "cron_failed": 8,
+  "cron_paused": 5,
+  "root_disk_pct": 94,
+  "backup_ok": 1
+}

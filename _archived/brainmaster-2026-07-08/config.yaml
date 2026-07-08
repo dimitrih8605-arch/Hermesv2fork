@@ -1,0 +1,7 @@
+model:
+  default: deepseek-v4-flash
+  provider: opencode-go
+env-path: /home/angkolj/.hermes/profiles/dimitri/.env
+plugins:
+  enabled: []
+  disabled: []

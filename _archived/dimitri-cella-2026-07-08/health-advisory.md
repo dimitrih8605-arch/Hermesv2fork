@@ -1,0 +1,1 @@
+{flag: root_disk_over_threshold, impact: 86% used, 17G free, .hermes=11G, priority: high} {flag: cron_failed_cleared, impact: trigger-state shows 0 now, brief had 2 (stale), priority: med} {flag: recommend_cleanup, advice: monitor disk weekly or trim .hermes grow/ hub cache, priority: med}
