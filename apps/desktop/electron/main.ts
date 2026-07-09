@@ -171,14 +171,12 @@ const REMOTE_DISPLAY_REASON = detectRemoteDisplay()
 if (REMOTE_DISPLAY_REASON) {
   app.disableHardwareAcceleration()
   app.commandLine.appendSwitch('disable-gpu-compositing')
-  // ponytail: --single-process works around systemd scope + shared memory
-  // kernel errors (errno 3 ESRCH) on this host. Without it, Chromium child
-  // processes (zygote/GPU/network) all crash with error_code=1002.
-  // Check /dev/shm permissions + kernel version if this regresses.
-  app.commandLine.appendSwitch('single-process')
+  // --no-sandbox avoids systemd scope naming collisions; --in-process-gpu
+  // avoids /dev/shm ESRCH crashes on this kernel by keeping GPU in the main process.
   app.commandLine.appendSwitch('no-sandbox')
+  app.commandLine.appendSwitch('in-process-gpu')
   console.log(
-    `[hermes] remote display detected (${REMOTE_DISPLAY_REASON}); GPU disabled, single-process mode (no GPU/zygote crashes)`
+    `[hermes] remote display detected (${REMOTE_DISPLAY_REASON}); GPU disabled, in-process GPU (no /dev/shm crashes)`
   )
 }
 
@@ -444,6 +442,8 @@ const APP_ICON_PATHS = [
   path.join(APP_ROOT, 'dist', 'apple-touch-icon.png'),
   path.join(unpackedPathFor(APP_ROOT), 'dist', 'apple-touch-icon.png')
 ]
+
+
 
 let rendererTitleBarTheme = null
 const terminalSessions = new Map()
@@ -5594,7 +5594,7 @@ function coerceDesktopConnectionConfig(input: any = {}, existing = readDesktopCo
   const nextRemote =
     mode === 'remote'
       ? buildRemoteBlock(remoteUrl, authMode, nextToken)
-      : { url: remoteUrl ? normalizeRemoteBaseUrl(remoteUrl) : remoteUrl, authMode, token: *** }
+      : { url: remoteUrl ? normalizeRemoteBaseUrl(remoteUrl) : remoteUrl, authMode, token: nextToken }
 
   // Preserve per-profile overrides when saving the global connection.
   return { mode, remote: nextRemote, profiles: existing.profiles || {} }
@@ -5803,7 +5803,7 @@ async function probeRemoteAuthMode(rawUrl) {
           .map(p => ({
             name: String(p.name || ''),
             displayName: String(p.display_name || p.name || ''),
-            supportsPassword: ***
+            supportsPassword: Boolean(p.supports_password)
           }))
           .filter(p => p.name)
       }
@@ -6193,9 +6193,9 @@ async function spawnPoolBackend(profile, entry) {
     mode: 'local',
     source: 'local',
     authMode: 'token',
-    token: ***
+    token: authToken,
     profile,
-    wsUrl: `ws://127.0.0.1:${port}/api/ws?token=***
+    wsUrl: `ws://127.0.0.1:${port}/api/ws?token=${encodeURIComponent(authToken)}`,
     logs: hermesLog.slice(-80),
     ...getWindowState()
   }
@@ -6326,7 +6326,7 @@ async function startHermes() {
         mode: 'remote',
         source: remote.source,
         authMode: remote.authMode || 'token',
-        token: ***
+        token: remote.token,
         wsUrl: remote.wsUrl,
         logs: hermesLog.slice(-80),
         ...getWindowState()
@@ -6485,8 +6485,8 @@ async function startHermes() {
       mode: 'local',
       source: 'local',
       authMode: 'token',
-      token: ***
-      wsUrl: `ws://127.0.0.1:${port}/api/ws?token=***
+      token: authToken,
+      wsUrl: `ws://127.0.0.1:${port}/api/ws?token=${encodeURIComponent(authToken)}`,
       logs: hermesLog.slice(-80),
       ...getWindowState()
     }
@@ -8529,7 +8529,7 @@ app.whenReady().then(() => {
   configureSpellChecker()
   registerPowerResumeListeners()
   createWindow()
-
+  
   // Win/Linux cold start: the launching hermes:// URL is in our own argv.
   const _coldStartLink = _extractDeepLink(process.argv)
 

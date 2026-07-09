@@ -70,6 +70,7 @@ function SudoDialog() {
         clearSudoRequest(request.sessionId, request.requestId)
       } catch (error) {
         notifyError(error, copy.sudoSendFailed)
+        clearSudoRequest(request.sessionId, request.requestId)
         setSubmitting(false)
       }
     },
@@ -166,6 +167,7 @@ function SecretDialog() {
         clearSecretRequest(request.sessionId, request.requestId)
       } catch (error) {
         notifyError(error, copy.secretSendFailed)
+        clearSecretRequest(request.sessionId, request.requestId)
         setSubmitting(false)
       }
     },
