@@ -5319,12 +5319,13 @@ def run_conversation(
 
                 # ── Raiden ending review (VERIFY completeness) ─────────────
                 try:
-                    from agent.advisory import ending_review
+                    from agent.advisory import ending_review, log_advice
                     _ending_gap = ending_review(
                         final_response=final_response,
                         original_user_message=original_user_message,
                         messages=messages,
                         api_call_count=api_call_count,
+                        session_id=getattr(agent, "session_id", "") or "",
                     )
                     if _ending_gap:
                         # Inject as continuation nudge — same pattern as

@@ -479,7 +479,7 @@ def build_turn_context(
     # so it always fires regardless of plugin system health.
     _builtin_ctx = ""
     try:
-        from agent.advisory import review_request, reset_count, reset_ending_review
+        from agent.advisory import review_request, reset_count, reset_ending_review, get_advice_for_next_turn
         reset_count()
         reset_ending_review()
         _advice, _ = review_request(original_user_message, messages, reset=True)
@@ -487,6 +487,16 @@ def build_turn_context(
             _builtin_ctx = _advice
             if not agent.quiet_mode:
                 agent._safe_print(_advice)
+        # Check for saved Raiden advice from previous turns' ending_review.
+        # This closes the loop: Raiden's post-hoc advice from turn N is
+        # injected into turn N+1's context so the agent can act on it.
+        _saved_advice = get_advice_for_next_turn(getattr(agent, "session_id", "") or "")
+        if _saved_advice:
+            _formatted = "\n".join(f"📋 Raiden (from last turn): {a}" for a in _saved_advice)
+            if _builtin_ctx:
+                _builtin_ctx += "\n\n" + _formatted
+            else:
+                _builtin_ctx = _formatted
     except Exception:
         pass
 

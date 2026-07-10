@@ -67,6 +67,49 @@ If issue: return ONE line with 🔴/⚠️/💡 prefix and the reasoning. Then �
 
 _RAIDEN_PREFIX = "⚡ Raiden:\n"
 
+# ── Advice persistence (session-level, carries across turns) ────────────────
+# Stores post-hoc advice from ending_review so it can be injected into
+# the NEXT turn's context. Keyed by session_id, max N per session.
+_advice_persist: dict[str, list[str]] = {}
+_ADVICE_MAX_PER_SESSION = 3
+# Dedup: hash of advice content → set of session_ids where it was given
+_advice_hash_log: dict[int, set[str]] = {}
+
+
+def log_advice(session_id: str, advice_text: str) -> None:
+    """Save post-hoc Raiden advice for injection into next turn."""
+    if not session_id or not advice_text:
+        return
+    session_advice = _advice_persist.setdefault(session_id, [])
+    # Dedup: check if same advice text already logged for this session
+    advice_hash = hash(advice_text)
+    session_set = _advice_hash_log.setdefault(advice_hash, set())
+    if session_id in session_set:
+        return  # Already logged this specific advice for this session
+    session_set.add(session_id)
+    if len(session_advice) >= _ADVICE_MAX_PER_SESSION:
+        session_advice.pop(0)  # Keep most recent
+    session_advice.append(advice_text)
+
+
+def get_advice_for_next_turn(session_id: str) -> list[str]:
+    """Retrieve and clear saved Raiden advice for the next turn."""
+    if not session_id:
+        return []
+    return _advice_persist.pop(session_id, [])
+
+
+def clear_session(session_id: str) -> None:
+    """Clear all Raiden state for a session (session reset)."""
+    _advice_persist.pop(session_id, None)
+    # Clean up hash log entries referencing this session
+    stale = [h for h, s in _advice_hash_log.items() if session_id in s]
+    for h in stale:
+        _advice_hash_log[h].discard(session_id)
+        if not _advice_hash_log[h]:
+            del _advice_hash_log[h]
+
+
 # ── Ending review dedup (1 nudge per turn) ────────────────────────────────
 _ending_review_given = False
 
@@ -91,8 +134,23 @@ def reset_count() -> None:
 
 def _is_trivial(msg: str) -> bool:
     """Return True if message is trivial (skip advisory)."""
-    lower = msg.lower()
-    return any(re.match(p, lower) for p in _TRIVIAL_PATTERNS)
+    lower = msg.lower().strip()
+    # Check simple patterns first (cheap)
+    if any(re.match(p, lower) for p in _TRIVIAL_PATTERNS):
+        return True
+    # Emoji-only messages — no advice needed
+    if re.fullmatch(r'[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0000FE00-\U0000FE0F\s]+', msg):
+        return True
+    # Very short messages (<15 chars after emoji removed)
+    stripped = re.sub(r'[\U0001F300-\U0001FAFF\U00002600-\U000027BF\s]+', '', lower)
+    if len(stripped) < 4:
+        return True
+    # Simple acknowledgment responses (single word or short phrase)
+    if re.match(r'^(got\s?it|k|kk|ok|okay|done|all?\s?(set|done|good|right|clean)|'
+                r'ack|yep|nope|sure|right|yeah|nice|good|great|perfect|cool|'
+                r'thanks|thx|ty|merci|thanks!)\.?$', lower):
+        return True
+    return False
 
 
 def _check_risk_patterns(msg: str) -> list[str]:
@@ -259,6 +317,8 @@ def ending_review(
     original_user_message: str,
     messages: list[dict],
     api_call_count: int,
+    *,
+    session_id: str = "",
 ) -> Optional[str]:
     """Lightweight end-of-turn completeness check.
 
@@ -289,12 +349,32 @@ def ending_review(
     # (< 80 chars after stripping think blocks) or evasive, flag it.
     if "?" in msg and len(resp) < 80:
         _ending_review_given = True
+        log_advice(session_id, "GAP: J asked a question — response very short for what was asked.")
         return "GAP: J asked a question — response is very short for what was asked."
 
     # If response is suspiciously short for a complex request
     if len(msg) > 100 and len(resp) < 150:
         _ending_review_given = True
+        log_advice(session_id, "GAP: Response too brief for complexity of the request.")
         return "GAP: Response seems too brief for the complexity of the request."
+
+    # Content repetition detection: if response repeats same content as previous response
+    if messages:
+        prev_assistant = None
+        for m in reversed(messages[:-1]):  # exclude current response
+            if m.get("role") == "assistant" and isinstance(m.get("content"), str):
+                prev_assistant = m["content"]
+                break
+        if prev_assistant and len(resp) > 20:
+            # Check for near-identical content (simple overlap heuristic)
+            prev_words = set(prev_assistant.lower().split())
+            resp_words = set(resp.lower().split())
+            if prev_words and resp_words:
+                overlap = len(prev_words & resp_words) / len(resp_words)
+                if overlap > 0.85:
+                    _ending_review_given = True
+                    log_advice(session_id, "Response repeats previous content — synthesize don't echo.")
+                    return "GAP: Response largely repeats previous turn's content — synthesize, don't echo."
 
     # ── LLM path ─────────────────────────────────────────────────────
     api_key = get_api_key()
@@ -352,6 +432,7 @@ def ending_review(
                 _ending_review_given = True
                 # Strip "GAP:" prefix, keep the description
                 gap = result[4:].strip()
+                log_advice(session_id, f"GAP: {gap}")
                 return f"The response appears incomplete: {gap}"
     except Exception:
         pass
