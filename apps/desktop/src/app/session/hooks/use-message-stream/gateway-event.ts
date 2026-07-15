@@ -51,6 +51,61 @@ import type { ClientSessionState } from '../../../types'
 
 import { hasSessionInfoStatePatch, sessionInfoStatePatch, SUBAGENT_EVENT_TYPES, toTodoPayload } from './utils'
 
+/**
+ * Submit the head of a background session's queued prompts, if any.
+ *
+ * Shared by the message.complete and session.info handlers so queued prompts
+ * advance even when the session finishes its turn while idle (no preceding
+ * message.complete) or the user navigated away before the queue drained.
+ *
+ * A per-entry in-flight set prevents the two event handlers from double-submitting
+ * when they fire in quick succession (session.info always follows message.complete).
+ */
+const _drainingEntryIds = new Set<string>()
+
+function _drainBackgroundQueue(
+  sessionId: string,
+  explicitSid: string,
+): void {
+  const queued = $queuedPromptsBySession.get()[sessionId]
+  if (!queued || queued.length === 0) {
+    return
+  }
+
+  const next = queued[0]
+
+  if (_drainingEntryIds.has(next.id)) {
+    return
+  }
+
+  const storedId = explicitSid || sessionId
+  const sessions = $sessions.get()
+  const sessionInfo = sessions.find(
+    s => s.id === storedId || s._lineage_root_id === storedId,
+  )
+  const profile = sessionInfo?.profile
+  const gateway = profile ? getGatewayForProfile(profile) ?? $gateway.get() : $gateway.get()
+
+  if (!gateway || !next.text.trim()) {
+    return
+  }
+
+  _drainingEntryIds.add(next.id)
+
+  gateway
+    .request('prompt.submit', { session_id: sessionId, text: next.text }, PROMPT_SUBMIT_REQUEST_TIMEOUT_MS)
+    .then(() => {
+      removeQueuedPrompt(sessionId, next.id)
+    })
+    .catch(() => {
+      // submit failed — leave in queue so the user can retry
+      // manually when they navigate back
+    })
+    .finally(() => {
+      _drainingEntryIds.delete(next.id)
+    })
+}
+
 interface GatewayEventDeps {
   activeSessionIdRef: MutableRefObject<string | null>
   compactedTurnRef: MutableRefObject<Set<string>>
@@ -213,6 +268,14 @@ export function useGatewayEventHandler(deps: GatewayEventDeps) {
           }
         }
 
+        // Background session became idle: drain queued prompts so the queue
+        // advances even when the session finishes its turn while idle (no
+        // preceding message.complete) or the user navigated away before the
+        // queue drained.
+        if (explicitSid && !isActiveEvent && runningChanged && payload && payload.running === false && sessionId) {
+          _drainBackgroundQueue(sessionId, explicitSid)
+        }
+
         if (payload?.usage && (!explicitSid || isActiveEvent)) {
           setCurrentUsage(current => ({ ...current, ...payload.usage }))
         }
@@ -353,38 +416,8 @@ export function useGatewayEventHandler(deps: GatewayEventDeps) {
           if (typeof document !== 'undefined' && !document.hasFocus()) {
             markPetUnread()
           }
-        } else {
-          // Background session drain: a non-active session just finished its
-          // turn. If it has queued prompts (user typed while busy, then switched
-          // away), auto-submit the next one so the queue advances even when the
-          // user is viewing a different session. Without this, queued prompts
-          // for background sessions are stranded until the user navigates back.
-          const queued = $queuedPromptsBySession.get()[sessionId]
-          if (queued && queued.length > 0) {
-            const next = queued[0]
-            // Resolve the correct gateway for this session's profile instead of
-            // using the active gateway ($gateway.get()) which may belong to a
-            // different profile. Without this, the prompt.submit goes to the
-            // wrong backend and silently fails.
-            const storedId = explicitSid || sessionId
-            const sessions = $sessions.get()
-            const sessionInfo = sessions.find(
-              s => s.id === storedId || s._lineage_root_id === storedId
-            )
-            const profile = sessionInfo?.profile
-            const gateway = profile ? getGatewayForProfile(profile) ?? $gateway.get() : $gateway.get()
-            if (gateway && next.text.trim()) {
-              gateway
-                .request('prompt.submit', { session_id: sessionId, text: next.text }, PROMPT_SUBMIT_REQUEST_TIMEOUT_MS)
-                .then(() => {
-                  removeQueuedPrompt(sessionId, next.id)
-                })
-                .catch(() => {
-                  // submit failed — leave in queue so the user can retry
-                  // manually when they navigate back
-                })
-            }
-          }
+        } else if (sessionId) {
+          _drainBackgroundQueue(sessionId, explicitSid)
         }
 
         if (payload?.usage) {
