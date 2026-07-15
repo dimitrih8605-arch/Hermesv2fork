@@ -48,7 +48,9 @@ def _env_float(name: str, default: float) -> float:
 
 _WATCHDOG_POLL_S = max(0.05, _env_float("HERMES_SLASH_WATCHDOG_POLL_S", 2.0))
 _ORPHAN_GRACE_S = max(0.0, _env_float("HERMES_SLASH_WATCHDOG_GRACE_S", 5.0))
+_MAX_LIFETIME_S = max(0.0, _env_float("HERMES_SLASH_MAX_LIFETIME_S", 43200.0))  # 12h
 _in_flight = threading.Event()  # set while a command is executing
+_start_time = time.monotonic()  # ponytail: max-lifetime guard, prevents orphan accumulation from unclean desktop disconnect
 
 
 def _is_orphaned(original_ppid, parent_create_time, getppid=os.getppid) -> bool:
@@ -89,6 +91,8 @@ def _prepare_slash_worker_runtime() -> None:
 def _start_parent_death_watchdog(original_ppid, parent_create_time) -> None:
     def _loop():
         while not _is_orphaned(original_ppid, parent_create_time):
+            if _MAX_LIFETIME_S > 0 and time.monotonic() - _start_time > _MAX_LIFETIME_S:
+                break  # max lifetime exceeded, exit cleanly
             time.sleep(_WATCHDOG_POLL_S)
         deadline = time.monotonic() + _ORPHAN_GRACE_S
         while _in_flight.is_set() and time.monotonic() < deadline:
