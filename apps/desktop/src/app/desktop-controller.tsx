@@ -1206,8 +1206,6 @@ export function DesktopController() {
     <Pane
       defaultOpen={false}
       disabled={!chatOpen}
-      forceCollapsed={narrowViewport}
-      hoverReveal
       id="file-browser"
       key="file-browser"
       maxWidth={FILE_BROWSER_MAX_WIDTH}
