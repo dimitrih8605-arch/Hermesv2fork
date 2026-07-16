@@ -9,6 +9,7 @@ import { readDesktopFileDataUrl, selectDesktopPaths } from '@/lib/desktop-fs'
 import { normalize } from '@/lib/text'
 import {
   addComposerAttachment,
+  addComposerAttachments,
   type ComposerAttachment,
   removeComposerAttachment,
   setComposerTerminalSelection
@@ -316,10 +317,14 @@ export function useComposerActions({ activeSessionId, currentCwd, requestGateway
         return
       }
 
+      // Batch all attachments in a single store update so picking 50+
+      // files doesn't cause 50 sequential React re-renders.
+      const attachments: ComposerAttachment[] = []
+
       for (const path of paths) {
         const rel = contextPath(path, currentCwd)
 
-        attachToMain({
+        attachments.push({
           id: attachmentId(kind, rel),
           kind,
           label: pathLabel(path),
@@ -328,6 +333,9 @@ export function useComposerActions({ activeSessionId, currentCwd, requestGateway
           path
         })
       }
+
+      addComposerAttachments(attachments)
+      requestComposerFocus('main')
     },
     [currentCwd]
   )

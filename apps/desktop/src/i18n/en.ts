@@ -586,7 +586,7 @@ export const en: Translations = {
       tokenTitle: 'Session token',
       tokenDesc: 'The dashboard session token used for REST and WebSocket access. Leave blank to keep the saved token.',
       existingToken: value => `Existing token ${value}`,
-      savedToken: 'saved',
+      savedToken: 'Saved',
       pasteSessionToken: 'Paste session token',
       testRemote: 'Test remote',
       saveForRestart: 'Save for next restart',
@@ -1760,6 +1760,11 @@ export const en: Translations = {
         label: 'Explain this',
         description: 'Walk through how the selected code works and link to the key files.',
         text: 'Please explain how this works and point me to the key files.'
+      },
+      securityCompare: {
+        label: 'Security check + compare',
+        description: 'Audit a repo for malware, then head-to-head test against our current tool.',
+        text: 'Security-audit this repo before install. Scan package.json, install scripts, deps, Dockerfile, and binary artifacts for crypto miners or data exfiltration. Report findings. Only proceed if clean. Then head-to-head test against whatever we use now — same task, same query set, real results table. Rank which is better and why.'
       }
     }
   },

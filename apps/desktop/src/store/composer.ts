@@ -143,6 +143,41 @@ export function addComposerAttachment(attachment: ComposerAttachment) {
   }
 }
 
+/**
+ * Batch-add multiple attachments in a single store update. Prevents N
+ * sequential React re-renders when picking many files at once (e.g.
+ * ATTACH → Files… selecting 50+ files).
+ */
+export function addComposerAttachments(attachments: ComposerAttachment[]) {
+  if (attachments.length === 0) {
+    return
+  }
+
+  const previous = $composerAttachments.get()
+  let addedNonUrl = false
+  const next = [...previous]
+
+  for (const attachment of attachments) {
+    const index = next.findIndex(item => item.id === attachment.id)
+
+    if (index < 0) {
+      next.push(attachment)
+
+      if (attachment.kind !== 'url') {
+        addedNonUrl = true
+      }
+    } else {
+      next[index] = attachment
+    }
+  }
+
+  $composerAttachments.set(next)
+
+  if (addedNonUrl) {
+    triggerHaptic('selection')
+  }
+}
+
 export function removeComposerAttachment(id: string): ComposerAttachment | null {
   const current = $composerAttachments.get()
   const removed = current.find(attachment => attachment.id === id) || null

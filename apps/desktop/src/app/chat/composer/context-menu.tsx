@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils'
 import { GHOST_ICON_BTN } from './controls'
 import type { ChatBarState } from './types'
 
-const SNIPPET_KEYS = ['codeReview', 'implementationPlan', 'explainThis']
+const SNIPPET_KEYS = ['codeReview', 'implementationPlan', 'explainThis', 'securityCompare']
 
 export function ContextMenu({
   state,
