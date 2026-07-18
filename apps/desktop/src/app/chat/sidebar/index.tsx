@@ -148,7 +148,6 @@ const SIDEBAR_NAV: SidebarNavItem[] = [
     keybindActionId: 'nav.skills'
   },
   {
-  {
     id: 'calendar',
     label: '',
     icon: props => <Codicon name="calendar" {...props} />,

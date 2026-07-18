@@ -10,6 +10,16 @@ ELECTRON="$HOME/.hermes/hermes-agent/node_modules/.bin/electron"
 export HERMES_DESKTOP_DISABLE_GPU=1
 export ELECTRON_OZONE_PLATFORM_HINT=auto
 
+# Stale-dist guard: rebuild if main process source is newer than dist bundle.
+# ponytail: one sentinel file (electron/main.ts) vs dist. npm run build
+# rebuilds both main + renderer together, so a single check catches all.
+cd "$DESKTOP_DIR" || exit 1
+if [ "electron/main.ts" -nt "dist/electron-main.mjs" ] 2>/dev/null; then
+  echo "[hermes-launcher] Source newer than dist — rebuilding..."
+  npm run build 2>&1 | tail -5
+  echo "[hermes-launcher] Rebuild complete."
+fi
+
 # Cleanup before launch — kill any previous hermes electron/processes
 kill -9 $(ps aux | grep 'hermes-agent.*electron' | grep -v grep | awk '{print $2}') 2>/dev/null
 kill -9 $(ps aux | grep 'electron.*desktop' | grep -v grep | awk '{print $2}') 2>/dev/null

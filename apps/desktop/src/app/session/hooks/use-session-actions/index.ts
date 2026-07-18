@@ -7,6 +7,7 @@ import { deleteSession, getSessionMessages, setSessionArchived } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { preserveLocalAssistantErrors, toChatMessages } from '@/lib/chat-messages'
 import { setSessionYolo } from '@/lib/yolo-session'
+import { clearComposerAttachments, clearSessionDraft } from '@/store/composer'
 import { clearQueuedPrompts } from '@/store/composer-queue'
 import { $pinnedSessionIds } from '@/store/layout'
 import { clearNotifications, notify, notifyError } from '@/store/notifications'
@@ -264,6 +265,10 @@ export function useSessionActions({
 
       setCurrentBranch('')
       // Never clear the composer here — ChatBar's per-thread draft swap owns it.
+      // ponytail: also clear here — the null-key draft accumulates attachments from
+      // prior new-chat sessions via stashAt(null) on every session switch.
+      clearSessionDraft(null)
+      clearComposerAttachments()
       setFreshDraftReady(true)
     },
     [activeSessionIdRef, busyRef, navigate, onFreshDraftRouteIntent, resetViewSync, selectedStoredSessionIdRef]
