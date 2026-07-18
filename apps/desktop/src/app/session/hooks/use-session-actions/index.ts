@@ -9,7 +9,7 @@ import { preserveLocalAssistantErrors, toChatMessages } from '@/lib/chat-message
 import { setSessionYolo } from '@/lib/yolo-session'
 import { clearComposerAttachments, clearSessionDraft } from '@/store/composer'
 import { clearQueuedPrompts } from '@/store/composer-queue'
-import { $pinnedSessionIds } from '@/store/layout'
+import { $pinnedSessionIds, setFileBrowserOpen } from '@/store/layout'
 import { clearNotifications, notify, notifyError } from '@/store/notifications'
 import { $activeGatewayProfile, $newChatProfile, ensureGatewayProfile, normalizeProfileKey } from '@/store/profile'
 import { resolveNewSessionCwd, tombstoneSessions, untombstoneSessions } from '@/store/projects'
@@ -269,6 +269,8 @@ export function useSessionActions({
       // prior new-chat sessions via stashAt(null) on every session switch.
       clearSessionDraft(null)
       clearComposerAttachments()
+      // ponytail: close right-side file browser — J wants it hidden on new session
+      setFileBrowserOpen(false)
       setFreshDraftReady(true)
     },
     [activeSessionIdRef, busyRef, navigate, onFreshDraftRouteIntent, resetViewSync, selectedStoredSessionIdRef]

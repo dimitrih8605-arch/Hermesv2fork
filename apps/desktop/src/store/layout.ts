@@ -43,6 +43,8 @@ export type RightRailTabId = typeof RIGHT_RAIL_PREVIEW_TAB_ID | `file:${string}`
 
 ensurePaneRegistered(CHAT_SIDEBAR_PANE_ID, { open: true })
 ensurePaneRegistered(FILE_BROWSER_PANE_ID, { open: false })
+// ponytail: force closed at startup — user can toggle open during session via titlebar
+setPaneOpen(FILE_BROWSER_PANE_ID, false)
 ensurePaneRegistered(PREVIEW_PANE_ID, { open: true })
 
 export const $sidebarOpen: ReadableAtom<boolean> = computed(

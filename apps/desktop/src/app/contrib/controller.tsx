@@ -510,14 +510,12 @@ $panesFlipped.listen(flipped => {
 bindTreeSideVisibility('left', $sidebarOpen, setSidebarOpen)
 bindTreeSideVisibility('right', $fileBrowserOpen, setFileBrowserOpen)
 
-// Workspace-scoped surfaces: the file tree and git diff only mean something
-// inside a project. A detached chat (no cwd) hides them — their zones
-// collapse and the chat absorbs the width; picking a project brings them
-// back. The terminal is NOT workspace-gated: unlike the old shell (where it
+// ponytail: files pane no longer auto-reveals on workspace presence.
+// $hasWorkspace binding removed — user toggles right side via titlebar.
+// setFileBrowserOpen(false) in startFreshSessionDraft keeps it closed by default.
+// The terminal is NOT workspace-gated: unlike the old shell (where it
 // rode the rail's row and vanished with it), its zone stands on its own.
 const $hasWorkspace = computed($currentCwd, cwd => Boolean(cwd.trim()))
-
-bindPaneVisibility('files', $hasWorkspace)
 // ⌘G — the review sidebar appears/disappears (and comes to the front).
 bindPaneVisibility(
   'review',
