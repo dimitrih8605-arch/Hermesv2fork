@@ -6018,7 +6018,7 @@ function coerceDesktopConnectionConfig(input: any = {}, existing = readDesktopCo
 
   const nextRemote = remoteLike
     ? buildRemoteBlock(remoteUrl, authMode, nextToken, cloudOrg)
-    : { url: remoteUrl ? normalizeRemoteBaseUrl(remoteUrl) : remoteUrl, authMode, token: nextToken }
+    : { url: remoteUrl ? normalizeRemoteBaseUrl(remoteUrl) : remoteUrl, authMode, token: (nextToken) }
 
   // Preserve per-profile overrides when saving the global connection.
   return { mode, remote: nextRemote, profiles: existing.profiles || {} }
@@ -7257,7 +7257,7 @@ function createWindow() {
     // Hidden until the first themed paint so macOS `vibrancy` (which ignores
     // `backgroundColor` and follows the OS appearance) can't flash a light
     // material before the renderer paints the app theme. See createSessionWindow.
-    show: false,
+    show: !IS_MAC,
     backgroundColor: getWindowBackgroundColor(),
     // Shared with the secondary session windows (chatWindowWebPreferences) so
     // both keep `backgroundThrottling: false` — the chat transcript streams via
