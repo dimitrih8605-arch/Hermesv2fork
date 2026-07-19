@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
-import { cn } from '@/lib/utils'
 
 const API = 'http://127.0.0.1:19876/api/email'
 
@@ -36,11 +35,13 @@ export function EmailView() {
 
   const loadInbox = useCallback(async () => {
     setLoading(true)
+
     try {
       const r = await fetch(`${API}/inbox`)
       const data = await r.json()
       setEmails(Array.isArray(data) ? data : [])
     } catch { setEmails([]) }
+
     setLoading(false)
   }, [])
 
@@ -49,15 +50,17 @@ export function EmailView() {
   const openEmail = useCallback(async (id: string) => {
     setDetailLoading(true)
     setView('detail')
+
     try {
       const r = await fetch(`${API}/read/${id}`)
       setDetail(await r.json())
     } catch { setDetail(null) }
+
     setDetailLoading(false)
   }, [])
 
   const reply = useCallback(() => {
-    if (!detail) return
+    if (!detail) {return}
     setCompose({
       to: detail.from.replace(/^.*<(.+)>$/, '$1').trim(),
       subject: `Re: ${detail.subject}`,
@@ -67,16 +70,19 @@ export function EmailView() {
   }, [detail])
 
   const send = useCallback(async () => {
-    if (!compose.to || !compose.subject) return
+    if (!compose.to || !compose.subject) {return}
     setSending(true)
     setError('')
+
     try {
       const r = await fetch(`${API}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(compose),
       })
+
       const res = await r.json()
+
       if (res.success) {
         setView('inbox')
         setCompose({ to: '', subject: '', body: '' })
@@ -85,6 +91,7 @@ export function EmailView() {
         setError(res.error || 'Send failed')
       }
     } catch { setError('Network error') }
+
     setSending(false)
   }, [compose, loadInbox])
 
@@ -96,10 +103,10 @@ export function EmailView() {
           <>
             <h2 className="text-sm font-semibold">Inbox</h2>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" onClick={() => setView('compose')} title="New email">
+              <Button onClick={() => setView('compose')} size="icon" title="New email" variant="ghost">
                 <Codicon name="new-file" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={loadInbox} disabled={loading}>
+              <Button disabled={loading} onClick={loadInbox} size="icon" variant="ghost">
                 <Codicon name={loading ? 'sync~spin' : 'refresh'} />
               </Button>
             </div>
@@ -110,7 +117,7 @@ export function EmailView() {
             <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => setView('inbox')}>
               <Codicon name="arrow-left" /> Back
             </button>
-            <Button variant="ghost" size="icon" onClick={reply} title="Reply">
+            <Button onClick={reply} size="icon" title="Reply" variant="ghost">
               <Codicon name="reply" />
             </Button>
           </>
@@ -127,7 +134,7 @@ export function EmailView() {
 
       {/* Inbox list */}
       {view === 'inbox' && (
-        <div ref={inboxRef} className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto" ref={inboxRef}>
           {loading && emails.length === 0 && (
             <div className="flex items-center justify-center py-8 text-xs text-muted-foreground">Loading...</div>
           )}
@@ -136,9 +143,9 @@ export function EmailView() {
           )}
           {emails.map(m => (
             <button
+              className="w-full border-b px-4 py-2.5 text-left transition-colors hover:bg-accent/50"
               key={m.id}
               onClick={() => openEmail(m.id)}
-              className="w-full border-b px-4 py-2.5 text-left transition-colors hover:bg-accent/50"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate text-xs font-medium">{m.from.replace(/<[^>]+>/, '').trim() || m.from}</span>
@@ -179,25 +186,25 @@ export function EmailView() {
         <div className="flex flex-1 flex-col gap-3 p-4">
           <input
             className="w-full border-b bg-transparent pb-1 text-xs outline-none placeholder:text-muted-foreground/50"
+            onChange={e => setCompose(p => ({ ...p, to: e.target.value }))}
             placeholder="To"
             value={compose.to}
-            onChange={e => setCompose(p => ({ ...p, to: e.target.value }))}
           />
           <input
             className="w-full border-b bg-transparent pb-1 text-xs outline-none placeholder:text-muted-foreground/50"
+            onChange={e => setCompose(p => ({ ...p, subject: e.target.value }))}
             placeholder="Subject"
             value={compose.subject}
-            onChange={e => setCompose(p => ({ ...p, subject: e.target.value }))}
           />
           <textarea
             className="flex-1 resize-none bg-transparent text-xs outline-none placeholder:text-muted-foreground/50"
+            onChange={e => setCompose(p => ({ ...p, body: e.target.value }))}
             placeholder="Write your message..."
             value={compose.body}
-            onChange={e => setCompose(p => ({ ...p, body: e.target.value }))}
           />
           {error && <div className="text-xs text-destructive">{error}</div>}
           <div className="flex justify-end">
-            <Button size="sm" onClick={send} disabled={sending || !compose.to || !compose.subject}>
+            <Button disabled={sending || !compose.to || !compose.subject} onClick={send} size="sm">
               {sending ? 'Sending...' : 'Send'}
             </Button>
           </div>

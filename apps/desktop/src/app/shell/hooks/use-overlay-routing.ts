@@ -5,7 +5,6 @@ import { type CommandCenterSection } from '@/app/command-center'
 import {
   AGENTS_ROUTE,
   appViewForPath,
-  CALENDAR_ROUTE,
   COMMAND_CENTER_ROUTE,
   isOverlayView,
   NEW_CHAT_ROUTE,
