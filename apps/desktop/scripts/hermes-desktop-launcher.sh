@@ -16,6 +16,17 @@ export ELECTRON_OZONE_PLATFORM_HINT=auto
 # ponytail: one sentinel file (electron/main.ts) vs dist. npm run build
 # rebuilds both main + renderer together, so a single check catches all.
 cd "$DESKTOP_DIR" || exit 1
+
+# Merge-artifact guard: check for *** / conflict markers before rebuilding.
+# These come from git stash merge during hermes update — upstream's ***
+# placeholders leak into valid variable names. Restore from git if found.
+MAIN_TS="$DESKTOP_DIR/electron/main.ts"
+if grep -q '<<<<<<<\|>>>>>>>\|token: \*\*\*\|wsUrl.*token=\*\*\*\|supportsPassword: \*\*\*' "$MAIN_TS" 2>/dev/null; then
+  echo "[hermes-launcher] Merge artifacts detected in main.ts — restoring clean copy..."
+  git checkout HEAD -- "$MAIN_TS" 2>/dev/null
+  echo "[hermes-launcher] Restored. Rebuilding..."
+fi
+
 if [ "electron/main.ts" -nt "dist/electron-main.mjs" ] 2>/dev/null; then
   echo "[hermes-launcher] Source newer than dist — rebuilding..."
   npm run build 2>&1 | tail -5

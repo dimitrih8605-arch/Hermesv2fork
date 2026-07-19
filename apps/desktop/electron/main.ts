@@ -6582,7 +6582,7 @@ function spawnSecondaryWindow({
     // dark-themed app on a light-mode Mac flashes white until the renderer
     // covers it. ready-to-show fires after the boot-time paint in
     // themes/context.tsx, so the window appears already themed.
-    show: false,
+    show: true,
     backgroundColor: getWindowBackgroundColor(),
     webPreferences: chatWindowWebPreferences(PRELOAD_PATH)
   })
@@ -6674,7 +6674,7 @@ function spawnPetOverlayWindow(bounds) {
     // main window is minimized. We flip this on only while the composer needs
     // the keyboard (see hermes:pet-overlay:set-focusable).
     focusable: false,
-    show: false,
+    show: true,
     // Fully transparent — the renderer paints only the sprite + bubble.
     backgroundColor: '#00000000',
     webPreferences: {
