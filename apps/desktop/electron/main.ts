@@ -5803,7 +5803,7 @@ async function probeRemoteAuthMode(rawUrl) {
           .map(p => ({
             name: String(p.name || ''),
             displayName: String(p.display_name || p.name || ''),
-            supportsPassword: ***
+            supportsPassword: Boolean(p.supports_password)
           }))
           .filter(p => p.name)
       }
@@ -6195,7 +6195,7 @@ async function spawnPoolBackend(profile, entry) {
     authMode: 'token',
     token: authToken,
     profile,
-    wsUrl: `ws://127.0.0.1:${port}/api/ws?token=${encodeURIComponent(authToken)},
+    wsUrl: `ws://127.0.0.1:${port}/api/ws?token=${encodeURIComponent(authToken)}`,
     logs: hermesLog.slice(-80),
     ...getWindowState()
   }
@@ -6486,7 +6486,7 @@ async function startHermes() {
       source: 'local',
       authMode: 'token',
       token: authToken,
-      wsUrl: `ws://127.0.0.1:${port}/api/ws?token=${encodeURIComponent(authToken)},
+      wsUrl: `ws://127.0.0.1:${port}/api/ws?token=${encodeURIComponent(authToken)}`,
       logs: hermesLog.slice(-80),
       ...getWindowState()
     }
@@ -6788,7 +6788,7 @@ function createWindow() {
     // Hidden until the first themed paint so macOS `vibrancy` (which ignores
     // `backgroundColor` and follows the OS appearance) can't flash a light
     // material before the renderer paints the app theme. See createSessionWindow.
-    show: false,
+    show: true,
     backgroundColor: getWindowBackgroundColor(),
     // Shared with the secondary session windows (chatWindowWebPreferences) so
     // both keep `backgroundThrottling: false` — the chat transcript streams via

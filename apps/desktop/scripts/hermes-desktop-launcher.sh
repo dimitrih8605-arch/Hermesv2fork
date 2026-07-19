@@ -7,7 +7,9 @@ PIDFILE="/tmp/hermes-desktop.pid"
 DESKTOP_DIR="$HOME/.hermes/hermes-agent/apps/desktop"
 ELECTRON="$HOME/.hermes/hermes-agent/node_modules/.bin/electron"
 
-export HERMES_DESKTOP_DISABLE_GPU=1
+# GPU stays enabled but merged into main process via --in-process-gpu (below).
+# --single-process (triggered by HERMES_DESKTOP_DISABLE_GPU=1) SIGTRAPs on kernel 6.17+.
+export HERMES_DESKTOP_DISABLE_GPU=
 export ELECTRON_OZONE_PLATFORM_HINT=auto
 
 # Stale-dist guard: rebuild if main process source is newer than dist bundle.
@@ -46,4 +48,4 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-cd "$DESKTOP_DIR" && "$ELECTRON" . --no-sandbox --in-process-gpu --disable-features=UseSystemdServiceManager --ozone-platform-hint=auto --enable-features=UseOzonePlatform
+cd "$DESKTOP_DIR" && "$ELECTRON" . --no-sandbox --in-process-gpu --disable-gpu-compositing --disable-dev-shm-usage --no-zygote --disable-features=UseSystemdServiceManager --ozone-platform-hint=auto --enable-features=UseOzonePlatform
