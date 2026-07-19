@@ -31,8 +31,11 @@ import type { SidebarActions, WiringActions } from './types'
 // full-page views the workspace route table mounts live here; overlay views
 // (agents/settings/…) are the controller's and stay in wiring.tsx.
 const ArtifactsView = lazy(async () => ({ default: (await import('../artifacts')).ArtifactsView }))
+const CalendarView = lazy(async () => ({ default: (await import('../calendar')).CalendarView }))
+const EmailView = lazy(async () => ({ default: (await import('../email')).EmailView }))
 const MessagingView = lazy(async () => ({ default: (await import('../messaging')).MessagingView }))
 const SkillsView = lazy(async () => ({ default: (await import('../skills')).SkillsView }))
+const TodoView = lazy(async () => ({ default: (await import('../todo')).TodoView }))
 
 export function LegacySessionRedirect() {
   const { sessionId } = useParams()
@@ -180,6 +183,9 @@ export const ChatRoutesSurface = memo(function ChatRoutesSurface({
       <Route element={page(<SkillsView setStatusbarItemGroup={setStatusbarItemGroup} />)} path="skills" />
       <Route element={page(<MessagingView setStatusbarItemGroup={setStatusbarItemGroup} />)} path="messaging" />
       <Route element={page(<ArtifactsView setStatusbarItemGroup={setStatusbarItemGroup} />)} path="artifacts" />
+      <Route element={page(<CalendarView />)} path="calendar" />
+      <Route element={page(<EmailView />)} path="email" />
+      <Route element={page(<TodoView />)} path="todo" />
       <Route element={null} path="agents" />
       <Route element={null} path="command-center" />
       <Route element={null} path="cron" />
