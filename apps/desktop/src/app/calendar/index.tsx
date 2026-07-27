@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,7 @@ function dateKey(y: number, m: number, d: number): string {
 
 function todayKey(): string {
   const d = new Date()
+
   return dateKey(d.getFullYear(), d.getMonth(), d.getDate())
 }
 
@@ -105,11 +106,13 @@ export function CalendarView(_props: CalendarViewProps) {
   const selectedNotes = notes[selectedDate] || []
 
   const addNote = () => {
-    if (!noteDraft.trim()) return
+    if (!noteDraft.trim()) {return}
+
     const updated = {
       ...notes,
       [selectedDate]: [...(notes[selectedDate] || []), { text: noteDraft.trim(), updated: Date.now() }]
     }
+
     setNotes(updated)
     saveNotes(updated)
     setNoteDraft('')
@@ -119,11 +122,13 @@ export function CalendarView(_props: CalendarViewProps) {
     const list = [...(notes[selectedDate] || [])]
     list.splice(idx, 1)
     const updated = { ...notes }
+
     if (list.length) {
       updated[selectedDate] = list
     } else {
       delete updated[selectedDate]
     }
+
     setNotes(updated)
     saveNotes(updated)
   }
@@ -134,6 +139,7 @@ export function CalendarView(_props: CalendarViewProps) {
 
   const calendarDays = useMemo(() => {
     const cells: Array<{ day: number; key: string; isToday: boolean; isSelected: boolean }> = []
+
     for (let d = 1; d <= daysInMonth; d++) {
       const key = dateKey(viewYear, viewMonth, d)
       const dt = new Date(viewYear, viewMonth, d)
@@ -144,6 +150,7 @@ export function CalendarView(_props: CalendarViewProps) {
         isSelected: key === selectedDate
       })
     }
+
     return cells
   }, [viewYear, viewMonth, daysInMonth, selectedDate, today])
 
@@ -153,11 +160,11 @@ export function CalendarView(_props: CalendarViewProps) {
       <div className="flex shrink-0 items-center justify-between border-b border-(--ui-stroke-secondary) px-6 py-3">
         <h1 className="text-base font-medium text-foreground">Calendar</h1>
         <Button
-          variant="ghost"
-          size="icon-xs"
-          onClick={close}
           aria-label="Close calendar"
           className="text-(--ui-text-tertiary) hover:text-foreground"
+          onClick={close}
+          size="icon-xs"
+          variant="ghost"
         >
           <Codicon name="close" size="1rem" />
         </Button>
@@ -168,17 +175,17 @@ export function CalendarView(_props: CalendarViewProps) {
         <div className="flex min-w-0 flex-1 flex-col p-6 pt-4">
           {/* Month navigation */}
           <div className="flex shrink-0 items-center justify-between mb-4">
-            <Button variant="ghost" size="icon-xs" onClick={prevMonth} aria-label="Previous month">
+            <Button aria-label="Previous month" onClick={prevMonth} size="icon-xs" variant="ghost">
               <Codicon name="chevron-left" size="1rem" />
             </Button>
             <span className="text-sm font-medium text-foreground">
               {MONTHS[viewMonth]} {viewYear}
             </span>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon-xs" onClick={goToday} className="text-xs text-(--ui-text-tertiary)" aria-label="Today">
+              <Button aria-label="Today" className="text-xs text-(--ui-text-tertiary)" onClick={goToday} size="icon-xs" variant="ghost">
                 Today
               </Button>
-              <Button variant="ghost" size="icon-xs" onClick={nextMonth} aria-label="Next month">
+              <Button aria-label="Next month" onClick={nextMonth} size="icon-xs" variant="ghost">
                 <Codicon name="chevron-right" size="1rem" />
               </Button>
             </div>
@@ -188,8 +195,8 @@ export function CalendarView(_props: CalendarViewProps) {
           <div className="mb-1 grid grid-cols-7 gap-px">
             {WEEKDAYS.map(day => (
               <div
-                key={day}
                 className="py-1 text-center text-[0.6875rem] font-medium uppercase tracking-wider text-(--ui-text-tertiary)"
+                key={day}
               >
                 {day}
               </div>
@@ -199,17 +206,17 @@ export function CalendarView(_props: CalendarViewProps) {
           {/* Calendar grid */}
           <div className="grid grid-cols-7 gap-px flex-1 auto-rows-fr">
             {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-              <div key={`empty-${i}`} className="min-h-0" />
+              <div className="min-h-0" key={`empty-${i}`} />
             ))}
             {calendarDays.map(cell => (
               <button
-                key={cell.key}
-                onClick={() => setSelectedDate(cell.key)}
                 className={cn(
                   'group relative flex flex-col items-center justify-start rounded-md px-1 py-1 text-xs transition-colors',
                   'hover:bg-(--ui-control-hover-background)',
                   cell.isSelected && 'bg-(--ui-control-active-background) ring-1 ring-inset ring-(--ui-stroke-tertiary)',
                 )}
+                key={cell.key}
+                onClick={() => setSelectedDate(cell.key)}
               >
                 <span
                   className={cn(
@@ -248,8 +255,8 @@ export function CalendarView(_props: CalendarViewProps) {
             ) : (
               <ul className="space-y-1 max-h-24 overflow-y-auto">
                 {selectedCrons.map(job => (
-                  <li key={job.id} className="flex items-center gap-1.5 text-xs text-foreground">
-                    <Codicon name="clock" size="0.75rem" className="shrink-0 text-(--ui-text-tertiary)" />
+                  <li className="flex items-center gap-1.5 text-xs text-foreground" key={job.id}>
+                    <Codicon className="shrink-0 text-(--ui-text-tertiary)" name="clock" size="0.75rem" />
                     <span className="truncate">{job.name || job.id}</span>
                     {job.schedule?.display && (
                       <span className="shrink-0 text-(--ui-text-tertiary)">{job.schedule.display}</span>
@@ -273,8 +280,8 @@ export function CalendarView(_props: CalendarViewProps) {
                   todos
                     .filter(t => t.status === 'pending' || t.status === 'in_progress')
                     .map(todo => (
-                      <li key={`${sid}-${todo.content}`} className="flex items-center gap-1.5 text-xs text-foreground">
-                        <Codicon name={todo.status === 'in_progress' ? 'tools' : 'circle-outline'} size="0.75rem" className="shrink-0 text-(--ui-text-tertiary)" />
+                      <li className="flex items-center gap-1.5 text-xs text-foreground" key={`${sid}-${todo.content}`}>
+                        <Codicon className="shrink-0 text-(--ui-text-tertiary)" name={todo.status === 'in_progress' ? 'tools' : 'circle-outline'} size="0.75rem" />
                         <span className="truncate">{todo.content}</span>
                       </li>
                     ))
@@ -294,16 +301,16 @@ export function CalendarView(_props: CalendarViewProps) {
               )}
               {selectedNotes.map((note, idx) => (
                 <div
-                  key={idx}
                   className="group relative rounded-md border border-(--ui-stroke-tertiary) bg-(--ui-control-active-background) px-2.5 py-1.5 pr-7"
+                  key={idx}
                 >
                   <p className="text-xs text-foreground">{note.text}</p>
                   <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={() => deleteNote(idx)}
-                    className="absolute right-0.5 top-0.5 hidden text-(--ui-text-tertiary) hover:text-destructive group-hover:flex"
                     aria-label="Delete note"
+                    className="absolute right-0.5 top-0.5 hidden text-(--ui-text-tertiary) hover:text-destructive group-hover:flex"
+                    onClick={() => deleteNote(idx)}
+                    size="icon-xs"
+                    variant="ghost"
                   >
                     <Codicon name="close" size="0.625rem" />
                   </Button>
@@ -314,21 +321,21 @@ export function CalendarView(_props: CalendarViewProps) {
             {/* Add note input */}
             <div className="mt-2 flex gap-1.5">
               <input
-                type="text"
-                value={noteDraft}
+                className="min-w-0 flex-1 rounded-md border border-(--ui-stroke-tertiary) bg-transparent px-2 py-1 text-xs text-foreground placeholder-(--ui-text-tertiary) outline-none focus:border-(--ui-accent-background)"
                 onChange={e => setNoteDraft(e.target.value)}
                 onKeyDown={e => {
-                  if (e.key === 'Enter') addNote()
+                  if (e.key === 'Enter') {addNote()}
                 }}
                 placeholder="Add a note..."
-                className="min-w-0 flex-1 rounded-md border border-(--ui-stroke-tertiary) bg-transparent px-2 py-1 text-xs text-foreground placeholder-(--ui-text-tertiary) outline-none focus:border-(--ui-accent-background)"
+                type="text"
+                value={noteDraft}
               />
               <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={addNote}
-                disabled={!noteDraft.trim()}
                 aria-label="Add note"
+                disabled={!noteDraft.trim()}
+                onClick={addNote}
+                size="icon-xs"
+                variant="ghost"
               >
                 <Codicon name="add" size="0.75rem" />
               </Button>

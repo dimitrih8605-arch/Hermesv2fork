@@ -3,10 +3,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { requestComposerSubmit } from '@/app/chat/composer/focus'
-import { $newChatProfile, $profiles } from '@/store/profile'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
+import { $newChatProfile, $profiles } from '@/store/profile'
 
 // ── Data model ──────────────────────────────────────────────────────────
 
@@ -41,6 +41,7 @@ const DEFAULT_BOARD: TodoBoard = {
 }
 
 let _taskCounter = Date.now()
+
 function genId(): string {
   return `t${++_taskCounter}`
 }
@@ -50,8 +51,10 @@ function genId(): string {
 function loadBoard(): TodoBoard {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw) as TodoBoard
+
+    if (raw) {return JSON.parse(raw) as TodoBoard}
   } catch { /* ignore */ }
+
   return structuredClone(DEFAULT_BOARD)
 }
 
@@ -89,10 +92,12 @@ export function TodoView() {
 
   const addTask = useCallback(() => {
     const text = newText.trim()
-    if (!text) return
+
+    if (!text) {return}
     setBoard(prev => {
       const next = structuredClone(prev)
       next.tasks.planned.push({ id: genId(), text })
+
       return next
     })
     setNewText('')
@@ -103,6 +108,7 @@ export function TodoView() {
     setBoard(prev => {
       const next = structuredClone(prev)
       next.tasks[colId] = next.tasks[colId].filter(t => t.id !== taskId)
+
       return next
     })
   }, [])
@@ -137,18 +143,22 @@ export function TodoView() {
   const handleDrop = useCallback(
     (e: React.DragEvent, targetColId: string) => {
       e.preventDefault()
+
       if (!dragId || !dragFromCol || dragFromCol === targetColId) {
         setDragId(null)
         setDragFromCol(null)
+
         return
       }
 
       setBoard(prev => {
         const next = structuredClone(prev)
         const task = next.tasks[dragFromCol].find(t => t.id === dragId)
-        if (!task) return prev
+
+        if (!task) {return prev}
         next.tasks[dragFromCol] = next.tasks[dragFromCol].filter(t => t.id !== dragId)
         next.tasks[targetColId].push(task)
+
         return next
       })
 
@@ -173,6 +183,7 @@ export function TodoView() {
     knownProfiles.forEach(n => names.add(n))
     const ordered = knownProfiles.filter(n => names.has(n))
     const extras = [...names].filter(n => !ordered.includes(n))
+
     return [...ordered, ...extras]
   }, [profiles])
 
@@ -180,7 +191,9 @@ export function TodoView() {
     setBoard(prev => {
       const next = structuredClone(prev)
       const col = next.columns.find(c => c.id === colId)
-      if (col) col.profileKey = profileKey
+
+      if (col) {col.profileKey = profileKey}
+
       return next
     })
   }, [])
@@ -199,7 +212,7 @@ export function TodoView() {
     <div className="flex h-full flex-col overflow-hidden bg-(--ui-editor-surface-background)">
       {/* Header */}
       <div className="flex shrink-0 items-center gap-2 border-b border-(--ui-stroke-tertiary) px-4 py-3">
-        <Codicon name="checklist" className="text-(--ui-text-secondary)" size="1.25rem" />
+        <Codicon className="text-(--ui-text-secondary)" name="checklist" size="1.25rem" />
         <h1 className="text-sm font-semibold text-foreground">Todo Board</h1>
       </div>
 
@@ -211,29 +224,29 @@ export function TodoView() {
 
           return (
             <div
-              key={col.id}
               className={cn(
                 'flex shrink-0 flex-col rounded-lg border border-(--ui-stroke-tertiary) bg-(--ui-sidebar-surface-background)',
                 isPlanned ? 'w-72' : 'w-56'
               )}
+              key={col.id}
               onDragOver={handleDragOver}
               onDrop={e => handleDrop(e, col.id)}
             >
               {/* Column header */}
               <div className="flex items-center gap-1.5 border-b border-(--ui-stroke-tertiary) px-3 py-2">
                 {!isPlanned ? (
-                  <Codicon name={profileIcon(col.profileKey ?? 'default')} className="text-(--ui-text-tertiary)" size="0.875rem" />
+                  <Codicon className="text-(--ui-text-tertiary)" name={profileIcon(col.profileKey ?? 'default')} size="0.875rem" />
                 ) : (
-                  <Codicon name="list-unordered" className="text-(--ui-text-tertiary)" size="0.875rem" />
+                  <Codicon className="text-(--ui-text-tertiary)" name="list-unordered" size="0.875rem" />
                 )}
                 <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
                   {isPlanned ? col.title : col.title}
                 </span>
                 {!isPlanned && (
                   <ProfileSelect
-                    value={col.profileKey ?? ''}
-                    options={allProfileKeys()}
                     onChange={key => setProfile(col.id, key)}
+                    options={allProfileKeys()}
+                    value={col.profileKey ?? ''}
                   />
                 )}
                 <span className="text-[0.6875rem] text-(--ui-text-tertiary)">{tasks.length}</span>
@@ -243,37 +256,37 @@ export function TodoView() {
               <div className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
                 {tasks.map(task => (
                   <div
-                    key={task.id}
-                    draggable
-                    onDragStart={e => handleDragStart(e, col.id, task.id)}
-                    onDragEnd={handleDragEnd}
                     className={cn(
                       'group flex cursor-grab items-start gap-1 rounded-md border border-transparent px-2 py-1.5 text-xs leading-snug text-foreground transition-colors',
                       'hover:border-(--ui-stroke-tertiary) hover:bg-(--ui-control-hover-background)',
                       dragId === task.id && 'opacity-40'
                     )}
+                    draggable
+                    key={task.id}
+                    onDragEnd={handleDragEnd}
+                    onDragStart={e => handleDragStart(e, col.id, task.id)}
                   >
                     <span className="min-w-0 flex-1 break-words">{task.text}</span>
 
                     {/* Run button — always visible on exec columns */}
                     {!isPlanned && (
                       <Button
-                        size="icon-xs"
-                        variant="ghost"
                         className="shrink-0 text-(--ui-text-secondary)"
                         onClick={() => runTask(task.text, col.profileKey ?? 'default')}
+                        size="icon-xs"
                         title="Run task"
+                        variant="ghost"
                       >
                         <Codicon name="play" size="0.75rem" />
                       </Button>
                     )}
 
                     <Button
-                      size="icon-xs"
-                      variant="ghost"
                       className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
                       onClick={() => deleteTask(col.id, task.id)}
+                      size="icon-xs"
                       title="Delete task"
+                      variant="ghost"
                     >
                       <Codicon name="trash" size="0.75rem" />
                     </Button>
@@ -292,14 +305,14 @@ export function TodoView() {
               {isPlanned && (
                 <div className="flex items-center gap-1 border-t border-(--ui-stroke-tertiary) p-2">
                   <input
-                    ref={inputRef}
                     className="min-w-0 flex-1 rounded-md border border-(--ui-stroke-tertiary) bg-(--ui-sidebar-surface-background) px-2 py-1 text-xs text-foreground outline-none placeholder:text-(--ui-text-tertiary)"
-                    placeholder="Add task..."
-                    value={newText}
                     onChange={e => setNewText(e.target.value)}
                     onKeyDown={handleKeyDown}
+                    placeholder="Add task..."
+                    ref={inputRef}
+                    value={newText}
                   />
-                  <Button size="icon-xs" variant="secondary" onClick={addTask} title="Add task">
+                  <Button onClick={addTask} size="icon-xs" title="Add task" variant="secondary">
                     <Codicon name="add" size="0.75rem" />
                   </Button>
                 </div>
@@ -327,37 +340,40 @@ function ProfileSelect({
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {return}
+
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false)
       }
     }
+
     document.addEventListener('mousedown', handler)
+
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
   return (
-    <div ref={ref} className="relative inline-flex items-center">
+    <div className="relative inline-flex items-center" ref={ref}>
       <button
-        onClick={() => setOpen(!open)}
         className={cn(
           'inline-flex items-center gap-0.5 rounded border px-1.5 py-0.5 text-[0.6875rem] text-foreground',
           'border-(--ui-stroke-tertiary) bg-(--ui-sidebar-surface-background) hover:border-(--ui-stroke-secondary)'
         )}
+        onClick={() => setOpen(!open)}
       >
         <span className="truncate max-w-28">{value || 'select'}</span>
-        <Codicon name="chevron-down" size="0.625rem" className="shrink-0 text-(--ui-text-tertiary)" />
+        <Codicon className="shrink-0 text-(--ui-text-tertiary)" name="chevron-down" size="0.625rem" />
       </button>
       {open && (
         <div className="absolute left-0 top-full z-50 mt-0.5 w-36 rounded-md border border-(--ui-stroke-tertiary) bg-(--ui-bg-elevated) py-1 shadow-lg">
           {options.map(key => (
             <button
-              key={key}
               className={cn(
                 'flex w-full items-center gap-1.5 px-2 py-1 text-left text-[0.6875rem] text-foreground hover:bg-(--ui-control-hover-background)',
                 key === value && 'font-medium'
               )}
+              key={key}
               onClick={() => {
                 onChange(key)
                 setOpen(false)

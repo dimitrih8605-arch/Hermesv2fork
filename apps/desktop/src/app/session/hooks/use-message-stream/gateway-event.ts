@@ -1,11 +1,11 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { type MutableRefObject, useCallback, useRef } from 'react'
 
-import { PROMPT_SUBMIT_REQUEST_TIMEOUT_MS } from '@/hermes'
 import { writeAgentTerminalChunk } from '@/app/right-sidebar/terminal/agent-terminal-stream'
 import { readActiveTerminal } from '@/app/right-sidebar/terminal/buffer'
 import { closeAgentTerminalByProc } from '@/app/right-sidebar/terminal/terminals'
 import { burstVibeHearts } from '@/components/chat/vibe-hearts'
+import { PROMPT_SUBMIT_REQUEST_TIMEOUT_MS } from '@/hermes'
 import { translateNow } from '@/i18n'
 import { type GatewayEventPayload, textPart } from '@/lib/chat-messages'
 import { coerceGatewayText, coerceThinkingText, normalizePersonalityValue } from '@/lib/chat-runtime'
@@ -16,6 +16,7 @@ import { isProviderSetupErrorMessage } from '@/lib/provider-setup-errors'
 import { reconcileApprovalModeForProfile } from '@/store/approval-mode'
 import { clearClarifyRequest, setClarifyRequest } from '@/store/clarify'
 import { setSessionCompacting } from '@/store/compaction'
+import { $queuedPromptsBySession, removeQueuedPrompt } from '@/store/composer-queue'
 import { refreshBackgroundProcesses } from '@/store/composer-status'
 import { $gateway, getGatewayForProfile } from '@/store/gateway'
 import { dispatchNativeNotification } from '@/store/native-notifications'
@@ -43,7 +44,6 @@ import {
   setYoloActive
 } from '@/store/session'
 import { clearSessionSubagents, pruneDelegateFallbackSubagents, upsertSubagent } from '@/store/subagents'
-import { $queuedPromptsBySession, removeQueuedPrompt } from '@/store/composer-queue'
 import { clearActiveSessionTodos } from '@/store/todos'
 import { recordToolDiff } from '@/store/tool-diffs'
 import { reportInstallMethodWarning } from '@/store/updates'
@@ -71,6 +71,7 @@ function _drainBackgroundQueue(
   explicitSid: string,
 ): void {
   const queued = $queuedPromptsBySession.get()[sessionId]
+
   if (!queued || queued.length === 0) {
     return
   }
@@ -83,9 +84,11 @@ function _drainBackgroundQueue(
 
   const storedId = explicitSid || sessionId
   const sessions = $sessions.get()
+
   const sessionInfo = sessions.find(
     s => s.id === storedId || s._lineage_root_id === storedId,
   )
+
   const profile = sessionInfo?.profile
   const gateway = profile ? getGatewayForProfile(profile) ?? $gateway.get() : $gateway.get()
 

@@ -214,7 +214,8 @@ export const removeComposerAttachment = (id: string) => mainComposerScope.remove
  * when picking many files at once (e.g. ATTACH → Files… selecting 50+ files).
  */
 export function addComposerAttachments(attachments: ComposerAttachment[]) {
-  if (attachments.length === 0) return
+  if (attachments.length === 0) {return}
+
   for (const attachment of attachments) {
     mainComposerScope.add(attachment)
   }

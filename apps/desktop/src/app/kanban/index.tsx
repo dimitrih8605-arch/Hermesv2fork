@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { PageLoader } from '@/components/page-loader'
 import { Badge } from '@/components/ui/badge'
@@ -79,6 +79,7 @@ export function KanbanView({ setStatusbarItemGroup }: { setStatusbarItemGroup?: 
     queryKey: QUERY_KEY,
     queryFn: async () => {
       setError(null)
+
       try { return await pluginRest<KanbanBoardResponse>('kanban', '/board') }
       catch (e) { const msg = e instanceof Error ? e.message : 'Failed'; setError(msg); throw e }
     }
@@ -92,11 +93,11 @@ export function KanbanView({ setStatusbarItemGroup }: { setStatusbarItemGroup?: 
 
     try {
       dispose = pluginSocket('kanban', '/events', () => {
-        if (active) queryClient.invalidateQueries({ queryKey: QUERY_KEY })
+        if (active) {queryClient.invalidateQueries({ queryKey: QUERY_KEY })}
       })
     } catch {
       pollId = setInterval(() => {
-        if (active) queryClient.invalidateQueries({ queryKey: QUERY_KEY })
+        if (active) {queryClient.invalidateQueries({ queryKey: QUERY_KEY })}
       }, 30_000)
     }
 
@@ -149,7 +150,8 @@ export function KanbanView({ setStatusbarItemGroup }: { setStatusbarItemGroup?: 
   const onDrop = (status: string) => (e: React.DragEvent) => {
     e.preventDefault()
     const id = e.dataTransfer.getData('text/plain')
-    if (id && draggedId) moveTask.mutate({ id, status })
+
+    if (id && draggedId) {moveTask.mutate({ id, status })}
   }
 
   // ── Edit helpers ───────────────────────────────────────────────────────
@@ -164,7 +166,7 @@ export function KanbanView({ setStatusbarItemGroup }: { setStatusbarItemGroup?: 
   }
 
   const saveEdit = () => {
-    if (!editTask) return
+    if (!editTask) {return}
     updateTask.mutate({
       id: editTask.id,
       title: editTitle.trim() || undefined,
@@ -178,7 +180,8 @@ export function KanbanView({ setStatusbarItemGroup }: { setStatusbarItemGroup?: 
 
   const handleAdd = () => {
     const title = newTitle.trim()
-    if (!title) return
+
+    if (!title) {return}
     createTask.mutate({
       title,
       assignee: newAssignee.trim() || undefined,
@@ -190,13 +193,14 @@ export function KanbanView({ setStatusbarItemGroup }: { setStatusbarItemGroup?: 
 
   // ── Render helpers ─────────────────────────────────────────────────────
   const tagEl = (t: string) => (
-    <span key={t} className="inline-block rounded-sm bg-(--ui-control-hover-background) px-1.5 py-px text-[9px] font-medium text-(--ui-text-secondary)">{t}</span>
+    <span className="inline-block rounded-sm bg-(--ui-control-hover-background) px-1.5 py-px text-[9px] font-medium text-(--ui-text-secondary)" key={t}>{t}</span>
   )
 
   const dueBadge = (d: string) => {
     const remaining = Math.ceil((new Date(d).getTime() - Date.now()) / 86400000)
     const overdue = remaining < 0
     const soon = remaining >= 0 && remaining <= 2
+
     return (
       <span className={`inline-block rounded-sm px-1.5 py-px text-[9px] font-medium ${
         overdue ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
@@ -213,7 +217,7 @@ export function KanbanView({ setStatusbarItemGroup }: { setStatusbarItemGroup?: 
       {/* Header */}
       <header className="flex shrink-0 items-center gap-3 border-b px-6 py-3">
         <h1 className="text-lg font-semibold tracking-tight">Kanban</h1>
-        <Button variant="ghost" size="icon-sm" onClick={() => refetch()} disabled={isPending}>
+        <Button disabled={isPending} onClick={() => refetch()} size="icon-sm" variant="ghost">
           <RefreshCw className={isPending ? 'animate-spin' : ''} />
         </Button>
       </header>
@@ -231,17 +235,17 @@ export function KanbanView({ setStatusbarItemGroup }: { setStatusbarItemGroup?: 
           {/* Add column */}
           <div
             className={`flex shrink-0 flex-col rounded-lg border border-dashed border-(--ui-border-muted) bg-(--ui-editor-surface-background) transition-all ${adding ? 'w-64' : 'w-12 cursor-pointer hover:border-(--ui-border-hover)'}`}
-            onClick={() => { if (!adding) setAdding(true) }}
+            onClick={() => { if (!adding) {setAdding(true)} }}
           >
             {adding ? (
               <div className="flex flex-col gap-2 p-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold tracking-wide text-(--ui-text-tertiary) uppercase">New Task</span>
-                  <button onClick={() => setAdding(false)} className="text-(--ui-text-tertiary) hover:text-foreground"><X className="h-4 w-4" /></button>
+                  <button className="text-(--ui-text-tertiary) hover:text-foreground" onClick={() => setAdding(false)}><X className="h-4 w-4" /></button>
                 </div>
-                <Input placeholder="Title" value={newTitle} onChange={e => setNewTitle(e.target.value)} autoFocus />
-                <Input placeholder="Assignee" value={newAssignee} onChange={e => setNewAssignee(e.target.value)} />
-                <Select value={newPriority} onValueChange={setNewPriority}>
+                <Input autoFocus onChange={e => setNewTitle(e.target.value)} placeholder="Title" value={newTitle} />
+                <Input onChange={e => setNewAssignee(e.target.value)} placeholder="Assignee" value={newAssignee} />
+                <Select onValueChange={setNewPriority} value={newPriority}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {PRIORITY_LABELS.map((l, i) => (
@@ -249,9 +253,9 @@ export function KanbanView({ setStatusbarItemGroup }: { setStatusbarItemGroup?: 
                     ))}
                   </SelectContent>
                 </Select>
-                <Input placeholder="Tags (comma-sep)" value={newTags} onChange={e => setNewTags(e.target.value)} />
-                <Input type="date" value={newDueDate} onChange={e => setNewDueDate(e.target.value)} className="h-8" />
-                <Button size="sm" onClick={handleAdd} disabled={!newTitle.trim() || createTask.isPending}>
+                <Input onChange={e => setNewTags(e.target.value)} placeholder="Tags (comma-sep)" value={newTags} />
+                <Input className="h-8" onChange={e => setNewDueDate(e.target.value)} type="date" value={newDueDate} />
+                <Button disabled={!newTitle.trim() || createTask.isPending} onClick={handleAdd} size="sm">
                   {createTask.isPending ? 'Adding…' : 'Add'}
                 </Button>
               </div>
@@ -263,15 +267,15 @@ export function KanbanView({ setStatusbarItemGroup }: { setStatusbarItemGroup?: 
           {/* Board columns */}
           {columns.map(col => (
             <div
+              className={`flex w-56 shrink-0 flex-col rounded-lg border transition-shadow ${draggedId ? 'border-dashed' : ''} bg-(--ui-editor-surface-background)`}
               key={col.name}
               onDragOver={onDragOver}
               onDrop={onDrop(col.name)}
-              className={`flex w-56 shrink-0 flex-col rounded-lg border transition-shadow ${draggedId ? 'border-dashed' : ''} bg-(--ui-editor-surface-background)`}
             >
               <div className="flex items-center gap-2 border-b px-3 py-2">
                 <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_COLORS[col.name] ?? 'bg-neutral-400'}`} />
                 <span className="text-sm font-medium">{COLUMN_LABELS[col.name] ?? col.name}</span>
-                <Badge variant="outline" className="ml-auto text-[10px]">{col.tasks.length}</Badge>
+                <Badge className="ml-auto text-[10px]" variant="outline">{col.tasks.length}</Badge>
               </div>
 
               <div className="flex flex-col gap-1.5 overflow-y-auto p-2 min-h-24">
@@ -280,11 +284,11 @@ export function KanbanView({ setStatusbarItemGroup }: { setStatusbarItemGroup?: 
                 )}
                 {col.tasks.map(task => (
                   <div
-                    key={task.id}
-                    draggable
-                    onDragStart={onDragStart(task.id)}
-                    onClick={() => openEdit(task)}
                     className={`cursor-grab active:cursor-grabbing rounded-md border bg-(--ui-surface-background) p-2 text-xs leading-relaxed hover:border-(--ui-border-hover) transition-opacity ${draggedId === task.id ? 'opacity-40' : ''}`}
+                    draggable
+                    key={task.id}
+                    onClick={() => openEdit(task)}
+                    onDragStart={onDragStart(task.id)}
                   >
                     <div className="flex items-start gap-1.5">
                       <span className="mt-0.5 shrink-0 text-(--ui-text-muted) cursor-grab"><MoreHorizontal className="h-3 w-3" /></span>
@@ -323,18 +327,18 @@ export function KanbanView({ setStatusbarItemGroup }: { setStatusbarItemGroup?: 
 
       {/* Edit dialog */}
       {editTask && (
-        <Dialog open onOpenChange={o => { if (!o) setEditTask(null) }}>
+        <Dialog onOpenChange={o => { if (!o) {setEditTask(null)} }} open>
           <DialogContent className="sm:max-w-md">
             <DialogHeader><DialogTitle>Edit Task</DialogTitle></DialogHeader>
             <div className="flex flex-col gap-3 px-6 py-4">
               <label className="text-xs font-medium text-(--ui-text-tertiary)">Title</label>
-              <Input value={editTitle} onChange={e => setEditTitle(e.target.value)} />
+              <Input onChange={e => setEditTitle(e.target.value)} value={editTitle} />
 
               <label className="text-xs font-medium text-(--ui-text-tertiary)">Assignee</label>
-              <Input value={editAssignee} onChange={e => setEditAssignee(e.target.value)} placeholder="Unassigned" />
+              <Input onChange={e => setEditAssignee(e.target.value)} placeholder="Unassigned" value={editAssignee} />
 
               <label className="text-xs font-medium text-(--ui-text-tertiary)">Priority</label>
-              <Select value={editPriority} onValueChange={setEditPriority}>
+              <Select onValueChange={setEditPriority} value={editPriority}>
                 <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {PRIORITY_LABELS.map((l, i) => (
@@ -344,22 +348,22 @@ export function KanbanView({ setStatusbarItemGroup }: { setStatusbarItemGroup?: 
               </Select>
 
               <label className="text-xs font-medium text-(--ui-text-tertiary)">Tags</label>
-              <Input value={editTags} onChange={e => setEditTags(e.target.value)} placeholder="comma-separated" />
+              <Input onChange={e => setEditTags(e.target.value)} placeholder="comma-separated" value={editTags} />
 
               <label className="text-xs font-medium text-(--ui-text-tertiary)">Due Date</label>
-              <Input type="date" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} />
+              <Input onChange={e => setEditDueDate(e.target.value)} type="date" value={editDueDate} />
 
               <label className="text-xs font-medium text-(--ui-text-tertiary)">Description</label>
-              <Textarea value={editBody} onChange={e => setEditBody(e.target.value)} rows={4} />
+              <Textarea onChange={e => setEditBody(e.target.value)} rows={4} value={editBody} />
               <p className="text-[10px] text-(--ui-text-tertiary)">Status: <span className="font-medium">{COLUMN_LABELS[editTask.status] ?? editTask.status}</span></p>
             </div>
             <DialogFooter className="flex items-center justify-between">
-              <Button variant="destructive" size="sm" onClick={() => deleteTask.mutate(editTask.id)} disabled={deleteTask.isPending}>
+              <Button disabled={deleteTask.isPending} onClick={() => deleteTask.mutate(editTask.id)} size="sm" variant="destructive">
                 <Trash2 className="mr-1 h-3 w-3" /> Delete
               </Button>
               <div className="flex gap-2">
-                <DialogClose asChild><Button variant="ghost" size="sm">Cancel</Button></DialogClose>
-                <Button size="sm" onClick={saveEdit} disabled={updateTask.isPending}>
+                <DialogClose asChild><Button size="sm" variant="ghost">Cancel</Button></DialogClose>
+                <Button disabled={updateTask.isPending} onClick={saveEdit} size="sm">
                   <Save className="mr-1 h-3 w-3" /> Save
                 </Button>
               </div>
